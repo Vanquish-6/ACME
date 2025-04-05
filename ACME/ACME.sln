@@ -1,0 +1,57 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35825.156
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ACME", "ACME.csproj", "{35534564-3C45-440D-9F0A-A2A214641894}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DatReaderWriter", "..\DatReaderWriter\DatReaderWriter\DatReaderWriter.csproj", "{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM64 = Debug|ARM64
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|ARM64 = Release|ARM64
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{35534564-3C45-440D-9F0A-A2A214641894}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Debug|ARM64.Build.0 = Debug|ARM64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Debug|x64.ActiveCfg = Debug|x64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Debug|x64.Build.0 = Debug|x64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Debug|x64.Deploy.0 = Debug|x64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Debug|x86.ActiveCfg = Debug|x86
+		{35534564-3C45-440D-9F0A-A2A214641894}.Debug|x86.Build.0 = Debug|x86
+		{35534564-3C45-440D-9F0A-A2A214641894}.Debug|x86.Deploy.0 = Debug|x86
+		{35534564-3C45-440D-9F0A-A2A214641894}.Release|ARM64.ActiveCfg = Release|ARM64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Release|ARM64.Build.0 = Release|ARM64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Release|ARM64.Deploy.0 = Release|ARM64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Release|x64.ActiveCfg = Release|x64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Release|x64.Build.0 = Release|x64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Release|x64.Deploy.0 = Release|x64
+		{35534564-3C45-440D-9F0A-A2A214641894}.Release|x86.ActiveCfg = Release|x86
+		{35534564-3C45-440D-9F0A-A2A214641894}.Release|x86.Build.0 = Release|x86
+		{35534564-3C45-440D-9F0A-A2A214641894}.Release|x86.Deploy.0 = Release|x86
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Debug|x64.Build.0 = Debug|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Debug|x86.Build.0 = Debug|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Release|ARM64.Build.0 = Release|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Release|x64.ActiveCfg = Release|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Release|x64.Build.0 = Release|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Release|x86.ActiveCfg = Release|Any CPU
+		{4E7A0965-CE1C-4FF7-8A02-FA4EB730B3F9}.Release|x86.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6E9E8776-32E1-44B0-A823-14DCF3BAD85F}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>ACME</RootNamespace>
+    <!-- <ApplicationManifest>app.manifest</ApplicationManifest> --> <!-- Manifest might not be needed or handled differently for unpackaged -->
+    <Platforms>x86;x64;ARM64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <!-- <PublishProfile>win-$(Platform).pubxml</PublishProfile> --> <!-- Removed MSIX Publish Profile -->
+    <UseWinUI>true</UseWinUI>
+    <!-- <EnableMsixTooling>true</EnableMsixTooling> --> <!-- Removed MSIX Tooling -->
+    <Nullable>enable</Nullable>
+
+    <!-- Unpackaged App Settings -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>false</WindowsAppSDKSelfContained> <!-- Default: rely on installed runtime -->
+    <!-- <WindowsAppSdkBootstrapInitialize>true</WindowsAppSdkBootstrapInitialize> --> <!-- Usually defaults to true, uncomment if needed -->
+
+  </PropertyGroup>
+
+  <!-- Removed ItemGroup with Assets - These might be handled differently or added back if needed for unpackaged -->
+  <!-- <ItemGroup>
+    <Content Include="Assets\SplashScreen.scale-200.png" />
+    <Content Include="Assets\LockScreenLogo.scale-200.png" />
+    <Content Include="Assets\Square150x150Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.scale-200.png" />
+    <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
+    <Content Include="Assets\StoreLogo.png" />
+    <Content Include="Assets\Wide310x150Logo.scale-200.png" />
+  </ItemGroup> -->
+
+  <ItemGroup>
+    <!-- <Manifest Include="$(ApplicationManifest)" /> --> <!-- Manifest might not be needed -->
+  </ItemGroup>
+
+  <!-- Removed MSIX ProjectCapability ItemGroup -->
+  <!-- <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <ProjectCapability Include="Msix" />
+  </ItemGroup> -->
+
+  <ItemGroup>
+    <!-- Package References remain the same -->
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.LayoutTransformControl" Version="8.1.240916" />
+    <PackageReference Include="CommunityToolkit.WinUI.Controls.Primitives" Version="8.1.240916" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250310001" />
+    <PackageReference Include="CommunityToolkit.WinUI.UI.Controls.Layout" Version="7.1.2" /> <!-- Manually added version -->
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\DatReaderWriter\DatReaderWriter\DatReaderWriter.csproj" />
+  </ItemGroup>
+
+  <!-- Removed MSIX HasPackageAndPublishMenu PropertyGroup -->
+  <!-- <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
+    <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
+  </PropertyGroup> -->
+
+  <!-- Publish Properties (might need adjustment for unpackaged) -->
+  <PropertyGroup>
+    <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
+    <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
+    <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
+    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Assets\ACMELogo.png" />
+    <None Remove="Assets\ACMELogo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\ACMELogo.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\ACMELogo.ico" Condition="Exists('$(MSBuildProjectDirectory)\Assets\ACMELogo.ico')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+</Project>

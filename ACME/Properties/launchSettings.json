@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "ACME (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "ACME (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
