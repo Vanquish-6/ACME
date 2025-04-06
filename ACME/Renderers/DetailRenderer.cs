@@ -743,8 +743,8 @@ namespace ACME.Renderers
                 List<CheckBox> componentCheckboxes = new List<CheckBox>();
                 HashSet<uint> selectedComponents = new HashSet<uint>(spell.Components);
                 
-                // Show all components across four columns
-                var componentsToShow = componentLookup.OrderBy(c => c.Value).ToList(); // Sort by name
+                // Show all components across four columns - REMOVE ALPHABETICAL SORTING
+                var componentsToShow = componentLookup.ToList(); // Use original order from lookup
                 var totalComponents = componentsToShow.Count;
                 
                 // Initial component distribution
@@ -1025,67 +1025,65 @@ namespace ACME.Renderers
                     spell.PortalLifetime = portalLifetimeBox.Value;
                     spell.NonComponentTargetType = (uint)nonComponentTargetBox.Value;
                     
-                    // Update components from checkboxes
-                    List<uint> selectedComponentIdsRaw = new List<uint>();
+                    // === Update components while preserving original order ===
+                
+                    // 1. Store the original order
+                    var originalComponentOrder = spell.Components.ToList(); // Make a copy
+                    Debug.WriteLine($"Original Components Order Before Edit: {string.Join(", ", originalComponentOrder)}");
+
+                    // 2. Get the set of currently checked component IDs
+                    var checkedComponentIds = new HashSet<uint>();
                     foreach (var checkbox in componentCheckboxes)
                     {
                         if (checkbox.IsChecked == true && checkbox.Tag is uint componentId)
                         {
-                            selectedComponentIdsRaw.Add(componentId);
+                            checkedComponentIds.Add(componentId);
                         }
                     }
-                    
-                    // Ensure we don't exceed 8 components initially
-                    if (selectedComponentIdsRaw.Count > 8)
-                    {
-                        selectedComponentIdsRaw = selectedComponentIdsRaw.Take(8).ToList();
-                    }
+                    Debug.WriteLine($"Checked Components Before Processing: {string.Join(", ", checkedComponentIds.OrderBy(id => id))}"); // Log checked IDs
 
-                    // --- Sort components by type before assigning ---
-                    List<uint> sortedComponentIds = selectedComponentIdsRaw; // Default to raw if sorting fails
-                    DatReaderWriter.DBObjs.SpellComponentTable? componentTable = null;
+                    // 3. Build the new list: Start with original, checked components in their original order
+                    var newComponentList = new List<uint>();
+                    var originalComponentsStillChecked = new HashSet<uint>(); // Track which originals were kept
 
-                    // Ensure DatabaseManager context exists
-                    Managers.DatabaseManager? dbManagerForSort = null;
-                    if (context != null && context.TryGetValue("DatabaseManager", out var dbManagerObjForSort) &&
-                        dbManagerObjForSort is Managers.DatabaseManager managerInstance && managerInstance.CurrentDatabase != null)
+                    foreach (var originalId in originalComponentOrder)
                     {
-                        dbManagerForSort = managerInstance;
-                        dbManagerForSort.CurrentDatabase.TryReadFile<DatReaderWriter.DBObjs.SpellComponentTable>(ACME.Constants.DatFileIds.SpellComponentsTableId, out componentTable);
-                    }
-
-                    if (componentTable != null)
-                    {
-                        var componentsToSort = new List<(uint Id, DatReaderWriter.Enums.ComponentType Type)>();
-                        foreach (var id in selectedComponentIdsRaw)
+                        if (checkedComponentIds.Contains(originalId))
                         {
-                            if (componentTable.Components.TryGetValue(id, out var compBase))
-                            {
-                                componentsToSort.Add((id, compBase.Type));
-                            }
-                            else
-                            {
-                                Debug.WriteLine($"Warning: Component ID {id} not found in SpellComponentTable during sorting. Adding as Undef.");
-                                componentsToSort.Add((id, DatReaderWriter.Enums.ComponentType.Undef)); // Add with default type if lookup fails
-                            }
+                            newComponentList.Add(originalId);
+                            originalComponentsStillChecked.Add(originalId); // Keep track
                         }
-
-                        // Sort based on the numeric value of ComponentType
-                        componentsToSort.Sort((a, b) => ((uint)a.Type).CompareTo((uint)b.Type));
-
-                        // Extract the sorted IDs
-                        sortedComponentIds = componentsToSort.Select(c => c.Id).ToList();
-                         Debug.WriteLine($"Sorted Components (DetailRenderer): {string.Join(", ", sortedComponentIds)}"); 
                     }
-                    else
+                    Debug.WriteLine($"Components After Adding Originals Still Checked: {string.Join(", ", newComponentList)}");
+
+                    // 4. Identify and sort the newly added components (those checked now but NOT in the original list that were kept)
+                    var newlyAddedComponents = new List<uint>();
+                    foreach(var checkedId in checkedComponentIds)
                     {
-                        Debug.WriteLine("Error: Could not load SpellComponentTable to sort components. Saving in selection order.");
-                        // Optionally show an error dialog here
+                        // If a checked ID wasn't part of the original list that was kept, it's new
+                        if (!originalComponentsStillChecked.Contains(checkedId)) 
+                        {
+                            newlyAddedComponents.Add(checkedId);
+                        }
                     }
-                    // --- End sorting logic ---
+                    newlyAddedComponents.Sort(); // Sort *only* the new components by ID for consistent appending
+                    Debug.WriteLine($"Newly Added Components (Sorted): {string.Join(", ", newlyAddedComponents)}");
                     
-                    spell.Components = sortedComponentIds; // Assign the sorted list
+                    // 5. Append the sorted new components
+                    newComponentList.AddRange(newlyAddedComponents);
+                    Debug.WriteLine($"Components After Adding New Ones: {string.Join(", ", newComponentList)}");
                     
+                    // 6. Ensure we don't exceed 8 components (truncate from the end if necessary)
+                    if (newComponentList.Count > 8)
+                    {
+                        newComponentList = newComponentList.Take(8).ToList();
+                        Debug.WriteLine("Warning: More than 8 components selected. Truncated to the first 8 based on original order + sorted new additions.");
+                    }
+
+                    // 7. Assign the final ordered list
+                    spell.Components = newComponentList;
+                    Debug.WriteLine($"Final Components Order Assigned: {string.Join(", ", spell.Components)}");
+
                     // Debug log after updating
                     Debug.WriteLine("=== SPELL AFTER UPDATE (DetailRenderer) ===");
                     Debug.WriteLine($"Name: {spell.Name}");
@@ -1181,34 +1179,32 @@ namespace ACME.Renderers
                                                     bool categoryMatch = savedSpell.Category == spell.Category;
                                                     bool typeMatch = savedSpell.MetaSpellType == spell.MetaSpellType;
                                                     
-                                                    // Compare components in detail
+                                                    // Compare components in detail (order matters now)
                                                     bool componentCountMatch = savedSpell.Components.Count == spell.Components.Count;
-                                                    bool allComponentsMatch = true;
+                                                    bool allComponentsMatch = componentCountMatch; // Start assuming true if counts match
                                                     
-                                                    // Sort both lists to ensure consistent comparison
-                                                    var originalComponents = spell.Components.OrderBy(c => c).ToList();
-                                                    var savedComponents = savedSpell.Components.OrderBy(c => c).ToList();
-                                                    
+                                                    // Compare elements directly in order, without sorting
                                                     if (componentCountMatch)
                                                     {
-                                                        for (int i = 0; i < originalComponents.Count; i++)
+                                                        for (int i = 0; i < spell.Components.Count; i++)
                                                         {
-                                                            if (originalComponents[i] != savedComponents[i])
+                                                            if (spell.Components[i] != savedSpell.Components[i])
                                                             {
                                                                 allComponentsMatch = false;
-                                                                Debug.WriteLine($"Component mismatch at index {i}: Expected {originalComponents[i]}, Got {savedComponents[i]}");
+                                                                Debug.WriteLine($"Component mismatch at index {i}: Expected {spell.Components[i]}, Got {savedSpell.Components[i]}");
                                                                 break;
                                                             }
                                                         }
                                                     }
                                                     else
                                                     {
-                                                        allComponentsMatch = false;
+                                                        // Counts don't match, definitely not a match
+                                                        allComponentsMatch = false; 
                                                         Debug.WriteLine($"Component count mismatch: Expected {spell.Components.Count}, Got {savedSpell.Components.Count}");
                                                         
-                                                        // Show detailed differences
-                                                        var missingComponents = originalComponents.Except(savedComponents).ToList();
-                                                        var extraComponents = savedComponents.Except(originalComponents).ToList();
+                                                        // Show detailed differences using original unsorted lists
+                                                        var missingComponents = spell.Components.Except(savedSpell.Components).ToList();
+                                                        var extraComponents = savedSpell.Components.Except(spell.Components).ToList();
                                                         
                                                         if (missingComponents.Any())
                                                             Debug.WriteLine($"Missing components: {string.Join(", ", missingComponents)}");
