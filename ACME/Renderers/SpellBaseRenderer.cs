@@ -285,7 +285,6 @@ namespace ACME.Renderers
                 Header = "Meta Spell ID",
                 Value = spell.MetaSpellId,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 350,
                 HorizontalAlignment = HorizontalAlignment.Left,
                 Margin = new Thickness(0, 0, 0, 10)
@@ -318,7 +317,6 @@ namespace ACME.Renderers
                 Header = "Icon ID",
                 Value = spell.Icon,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 150
             };
             visualRow.Children.Add(iconBox);
@@ -327,7 +325,6 @@ namespace ACME.Renderers
                 Header = "Display Order",
                 Value = spell.DisplayOrder,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 150
             };
             visualRow.Children.Add(displayOrderBox);
@@ -340,7 +337,6 @@ namespace ACME.Renderers
                 Header = "Caster Effect",
                 Value = spell.CasterEffect,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             vfxRow1.Children.Add(casterEffectBox);
@@ -349,7 +345,6 @@ namespace ACME.Renderers
                 Header = "Target Effect",
                 Value = spell.TargetEffect,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             vfxRow1.Children.Add(targetEffectBox);
@@ -362,7 +357,6 @@ namespace ACME.Renderers
                 Header = "Fizzle Effect",
                 Value = spell.FizzleEffect,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             vfxRow2.Children.Add(fizzleEffectBox);
@@ -393,7 +387,6 @@ namespace ACME.Renderers
                 Header = "Base Mana",
                 Value = spell.BaseMana,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             energyRow1.Children.Add(manaBox);
@@ -402,7 +395,6 @@ namespace ACME.Renderers
                 Header = "Mana Modifier",
                 Value = spell.ManaMod,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             energyRow1.Children.Add(manaMod);
@@ -415,7 +407,6 @@ namespace ACME.Renderers
                 Header = "Power",
                 Value = spell.Power,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             energyRow2.Children.Add(powerBox);
@@ -424,8 +415,7 @@ namespace ACME.Renderers
                 Header = "Economy Modifier",
                 Value = spell.SpellEconomyMod,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Width = 200,
-                Minimum = 0
+                Width = 200
             };
             energyRow2.Children.Add(economyModBox);
             
@@ -437,8 +427,7 @@ namespace ACME.Renderers
                 Header = "Base Range Constant",
                 Value = spell.BaseRangeConstant,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Width = 200,
-                Minimum = 0
+                Width = 200
             };
             rangeRow1.Children.Add(rangeConstBox);
             
@@ -446,8 +435,7 @@ namespace ACME.Renderers
                 Header = "Base Range Modifier",
                 Value = spell.BaseRangeMod,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Width = 200,
-                Minimum = 0
+                Width = 200
             };
             rangeRow1.Children.Add(rangeModBox);
             
@@ -459,7 +447,6 @@ namespace ACME.Renderers
                 Header = "Non-Component Target Type",
                 Value = spell.NonComponentTargetType,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             rangeRow2.Children.Add(nonComponentTargetBox);
@@ -472,7 +459,6 @@ namespace ACME.Renderers
                 Header = "Bitfield",
                 Value = spell.Bitfield,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             extraRow1.Children.Add(bitfieldBox);
@@ -481,7 +467,6 @@ namespace ACME.Renderers
                 Header = "Formula Version",
                 Value = spell.FormulaVersion,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             extraRow1.Children.Add(formulaVersionBox);
@@ -494,7 +479,6 @@ namespace ACME.Renderers
                 Header = "Component Loss",
                 Value = spell.ComponentLoss,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Maximum = 1,
                 SmallChange = 0.01,
                 LargeChange = 0.1,
@@ -528,7 +512,6 @@ namespace ACME.Renderers
                 Header = "Duration (seconds)",
                 Value = spell.Duration,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             durationRow1.Children.Add(durationBox);
@@ -537,8 +520,7 @@ namespace ACME.Renderers
                 Header = "Degrade Modifier",
                 Value = spell.DegradeModifier,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Width = 200,
-                Minimum = 0
+                Width = 200
             };
             durationRow1.Children.Add(degradeModBox);
             
@@ -550,8 +532,7 @@ namespace ACME.Renderers
                 Header = "Degrade Limit",
                 Value = spell.DegradeLimit,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Width = 200,
-                Minimum = 0
+                Width = 200
             };
             durationRow2.Children.Add(degradeLimitBox);
             
@@ -563,7 +544,6 @@ namespace ACME.Renderers
                 Header = "Recovery Interval",
                 Value = spell.RecoveryInterval,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             recoveryRow1.Children.Add(recoveryIntervalBox);
@@ -572,8 +552,7 @@ namespace ACME.Renderers
                 Header = "Recovery Amount",
                 Value = spell.RecoveryAmount,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Width = 200,
-                Minimum = 0
+                Width = 200
             };
             recoveryRow1.Children.Add(recoveryAmountBox);
             
@@ -585,7 +564,6 @@ namespace ACME.Renderers
                 Header = "Portal Lifetime (seconds)",
                 Value = spell.PortalLifetime,
                 SpinButtonPlacementMode = NumberBoxSpinButtonPlacementMode.Compact,
-                Minimum = 0,
                 Width = 200
             };
             recoveryRow2.Children.Add(portalLifetimeBox);
@@ -877,9 +855,72 @@ namespace ACME.Renderers
             
             if (result == ContentDialogResult.Primary)
             {
+                // Debug log before updating
+                Debug.WriteLine("=== SPELL BEFORE UPDATE ===");
+                Debug.WriteLine($"Name: {spell.Name}");
+                Debug.WriteLine($"Description: {spell.Description}");
+                Debug.WriteLine($"School: {spell.School} ({(int)spell.School})");
+                Debug.WriteLine($"Category: {spell.Category} ({(int)spell.Category})");
+                Debug.WriteLine($"MetaSpellType: {spell.MetaSpellType} ({(int)spell.MetaSpellType})");
+                Debug.WriteLine($"MetaSpellId: {spell.MetaSpellId}");
+                Debug.WriteLine($"Bitfield: {spell.Bitfield}");
+                Debug.WriteLine($"Components: {string.Join(", ", spell.Components)}");
+                Debug.WriteLine($"BaseMana: {spell.BaseMana}");
+                Debug.WriteLine($"BaseRangeConstant: {spell.BaseRangeConstant}");
+                Debug.WriteLine($"BaseRangeMod: {spell.BaseRangeMod}");
+                Debug.WriteLine($"Power: {spell.Power}");
+                Debug.WriteLine($"SpellEconomyMod: {spell.SpellEconomyMod}");
+                Debug.WriteLine($"FormulaVersion: {spell.FormulaVersion}");
+                Debug.WriteLine($"ComponentLoss: {spell.ComponentLoss}");
+                Debug.WriteLine($"Duration: {spell.Duration}");
+                Debug.WriteLine($"DegradeModifier: {spell.DegradeModifier}");
+                Debug.WriteLine($"DegradeLimit: {spell.DegradeLimit}");
+                Debug.WriteLine($"PortalLifetime: {spell.PortalLifetime}");
+                Debug.WriteLine($"CasterEffect: {spell.CasterEffect}");
+                Debug.WriteLine($"TargetEffect: {spell.TargetEffect}");
+                Debug.WriteLine($"FizzleEffect: {spell.FizzleEffect}");
+                Debug.WriteLine($"RecoveryInterval: {spell.RecoveryInterval}");
+                Debug.WriteLine($"RecoveryAmount: {spell.RecoveryAmount}");
+                Debug.WriteLine($"DisplayOrder: {spell.DisplayOrder}");
+                Debug.WriteLine($"NonComponentTargetType: {spell.NonComponentTargetType}");
+                Debug.WriteLine($"ManaMod: {spell.ManaMod}");
+                
+                // Track the original name to detect changes
+                string originalName = spell.Name;
+                
                 // Update basic properties
                 spell.Name = nameBox.Text;
                 spell.Description = descBox.Text;
+                
+                // Check if name has changed and warn about encryption impacts
+                if (originalName != spell.Name)
+                {
+                    Debug.WriteLine("!!!! WARNING: SPELL NAME CHANGED !!!!");
+                    Debug.WriteLine("This will change the component encryption key and may affect game functionality.");
+                    Debug.WriteLine($"Old name: '{originalName}', New name: '{spell.Name}'");
+                    
+                    // Get information about the spell from DatReaderWriter
+                    var spellType = typeof(DatReaderWriter.Types.SpellBase);
+                    var methodInfo = spellType.GetMethod("GetHashKey", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    
+                    if (methodInfo != null)
+                    {
+                        try {
+                            // Create a temporary spell with old name to get old hash
+                            var tempSpell = new DatReaderWriter.Types.SpellBase { Name = originalName, Description = spell.Description };
+                            uint oldHash = (uint)methodInfo.Invoke(tempSpell, null);
+                            
+                            // Get hash with new name
+                            uint newHash = (uint)methodInfo.Invoke(spell, null);
+                            
+                            Debug.WriteLine($"Encryption key changed: Old hash: 0x{oldHash:X8}, New hash: 0x{newHash:X8}");
+                            Debug.WriteLine("This may affect how components are stored and retrieved.");
+                        }
+                        catch (Exception ex) {
+                            Debug.WriteLine($"Could not check hash keys: {ex.Message}");
+                        }
+                    }
+                }
                 
                 // Parse enum values from strings
                 if (Enum.TryParse<MagicSchool>(schoolCombo.SelectedItem.ToString(), out MagicSchool selectedSchool))
@@ -927,22 +968,65 @@ namespace ACME.Renderers
                 spell.NonComponentTargetType = (uint)nonComponentTargetBox.Value;
                 
                 // Update components from checkboxes
-                List<uint> selectedComponentIds = new List<uint>();
+                List<uint> selectedComponentIdsRaw = new List<uint>();
                 foreach (var checkbox in componentCheckboxes)
                 {
                     if (checkbox.IsChecked == true && checkbox.Tag is uint componentId)
                     {
-                        selectedComponentIds.Add(componentId);
+                        selectedComponentIdsRaw.Add(componentId);
                     }
                 }
                 
-                // Ensure we don't exceed 8 components
-                if (selectedComponentIds.Count > 8)
+                // Ensure we don't exceed 8 components initially
+                if (selectedComponentIdsRaw.Count > 8)
                 {
-                    selectedComponentIds = selectedComponentIds.Take(8).ToList();
+                    selectedComponentIdsRaw = selectedComponentIdsRaw.Take(8).ToList();
                 }
+
+                // --- Sort components by type before assigning ---
+                List<uint> sortedComponentIds = selectedComponentIdsRaw; // Default to raw if sorting fails
+                DatReaderWriter.DBObjs.SpellComponentTable? componentTable = null;
+
+                // Ensure DatabaseManager context exists
+                Managers.DatabaseManager? dbManagerForSort = null;
+                if (context != null && context.TryGetValue("DatabaseManager", out var dbManagerObjForSort) &&
+                    dbManagerObjForSort is Managers.DatabaseManager managerInstance && managerInstance.CurrentDatabase != null)
+                {
+                    dbManagerForSort = managerInstance;
+                    dbManagerForSort.CurrentDatabase.TryReadFile<DatReaderWriter.DBObjs.SpellComponentTable>(ACME.Constants.DatFileIds.SpellComponentsTableId, out componentTable);
+                }
+
+                if (componentTable != null)
+                {
+                    var componentsToSort = new List<(uint Id, DatReaderWriter.Enums.ComponentType Type)>();
+                    foreach (var id in selectedComponentIdsRaw)
+                    {
+                        if (componentTable.Components.TryGetValue(id, out var compBase))
+                        {
+                            componentsToSort.Add((id, compBase.Type));
+                        }
+                        else
+                        {
+                             Debug.WriteLine($"Warning: Component ID {id} not found in SpellComponentTable during sorting. Adding as Undef.");
+                             componentsToSort.Add((id, DatReaderWriter.Enums.ComponentType.Undef)); // Add with default type if lookup fails
+                        }
+                    }
+
+                    // Sort based on the numeric value of ComponentType
+                    componentsToSort.Sort((a, b) => ((uint)a.Type).CompareTo((uint)b.Type));
+
+                    // Extract the sorted IDs
+                    sortedComponentIds = componentsToSort.Select(c => c.Id).ToList();
+                    Debug.WriteLine($"Sorted Components (Renderer): {string.Join(", ", sortedComponentIds)}"); 
+                }
+                else
+                {
+                    Debug.WriteLine("Error: Could not load SpellComponentTable to sort components. Saving in selection order.");
+                    // Optionally show an error dialog here
+                }
+                // --- End sorting logic ---
                 
-                spell.Components = selectedComponentIds;
+                spell.Components = sortedComponentIds; // Assign the sorted list
                 
                 // Save changes to the database file
                 try
@@ -994,6 +1078,98 @@ namespace ACME.Renderers
                                                      refreshViewAction is Action refreshView)
                                             {
                                                 refreshView();
+                                            }
+                                        }
+                                        
+                                        // Verify the reloaded spell has the same core values as the original
+                                        Debug.WriteLine("=== VERIFYING SAVE OPERATION ===");
+                                        if (db.TryReadFile<DatReaderWriter.DBObjs.SpellTable>(ACME.Constants.DatFileIds.SpellTableId, out var verifyTable))
+                                        {
+                                            if (verifyTable.Spells.TryGetValue(originalSpellId, out var savedSpell))
+                                            {
+                                                // Check if the saved spell has the updated values
+                                                Debug.WriteLine("Successfully read back saved spell:");
+                                                Debug.WriteLine($"Name: {savedSpell.Name}");
+                                                Debug.WriteLine($"Description: {savedSpell.Description}");
+                                                Debug.WriteLine($"School: {savedSpell.School} ({(int)savedSpell.School})");
+                                                Debug.WriteLine($"Category: {savedSpell.Category} ({(int)savedSpell.Category})");
+                                                Debug.WriteLine($"MetaSpellType: {savedSpell.MetaSpellType} ({(int)savedSpell.MetaSpellType})");
+                                                Debug.WriteLine($"MetaSpellId: {savedSpell.MetaSpellId}");
+                                                Debug.WriteLine($"Bitfield: {savedSpell.Bitfield}");
+                                                Debug.WriteLine($"Components: {string.Join(", ", savedSpell.Components)}");
+                                                Debug.WriteLine($"BaseMana: {savedSpell.BaseMana}");
+                                                Debug.WriteLine($"BaseRangeConstant: {savedSpell.BaseRangeConstant}");
+                                                Debug.WriteLine($"BaseRangeMod: {savedSpell.BaseRangeMod}");
+                                                Debug.WriteLine($"Power: {savedSpell.Power}");
+                                                Debug.WriteLine($"SpellEconomyMod: {savedSpell.SpellEconomyMod}");
+                                                Debug.WriteLine($"FormulaVersion: {savedSpell.FormulaVersion}");
+                                                Debug.WriteLine($"ComponentLoss: {savedSpell.ComponentLoss}");
+                                                Debug.WriteLine($"Duration: {savedSpell.Duration}");
+                                                Debug.WriteLine($"DegradeModifier: {savedSpell.DegradeModifier}");
+                                                Debug.WriteLine($"DegradeLimit: {savedSpell.DegradeLimit}");
+                                                Debug.WriteLine($"PortalLifetime: {savedSpell.PortalLifetime}");
+                                                Debug.WriteLine($"CasterEffect: {savedSpell.CasterEffect}");
+                                                Debug.WriteLine($"TargetEffect: {savedSpell.TargetEffect}");
+                                                Debug.WriteLine($"FizzleEffect: {savedSpell.FizzleEffect}");
+                                                Debug.WriteLine($"RecoveryInterval: {savedSpell.RecoveryInterval}");
+                                                Debug.WriteLine($"RecoveryAmount: {savedSpell.RecoveryAmount}");
+                                                Debug.WriteLine($"DisplayOrder: {savedSpell.DisplayOrder}");
+                                                Debug.WriteLine($"NonComponentTargetType: {savedSpell.NonComponentTargetType}");
+                                                Debug.WriteLine($"ManaMod: {savedSpell.ManaMod}");
+                                                
+                                                bool schoolMatch = savedSpell.School == spell.School;
+                                                bool categoryMatch = savedSpell.Category == spell.Category;
+                                                bool typeMatch = savedSpell.MetaSpellType == spell.MetaSpellType;
+                                                
+                                                // Compare components in detail
+                                                bool componentCountMatch = savedSpell.Components.Count == spell.Components.Count;
+                                                bool allComponentsMatch = true;
+                                                
+                                                // Sort both lists to ensure consistent comparison
+                                                var originalComponents = spell.Components.OrderBy(c => c).ToList();
+                                                var savedComponents = savedSpell.Components.OrderBy(c => c).ToList();
+                                                
+                                                if (componentCountMatch)
+                                                {
+                                                    for (int i = 0; i < originalComponents.Count; i++)
+                                                    {
+                                                        if (originalComponents[i] != savedComponents[i])
+                                                        {
+                                                            allComponentsMatch = false;
+                                                            Debug.WriteLine($"Component mismatch at index {i}: Expected {originalComponents[i]}, Got {savedComponents[i]}");
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    allComponentsMatch = false;
+                                                    Debug.WriteLine($"Component count mismatch: Expected {spell.Components.Count}, Got {savedSpell.Components.Count}");
+                                                    
+                                                    // Show detailed differences
+                                                    var missingComponents = originalComponents.Except(savedComponents).ToList();
+                                                    var extraComponents = savedComponents.Except(originalComponents).ToList();
+                                                    
+                                                    if (missingComponents.Any())
+                                                        Debug.WriteLine($"Missing components: {string.Join(", ", missingComponents)}");
+                                                    
+                                                    if (extraComponents.Any())
+                                                        Debug.WriteLine($"Extra components: {string.Join(", ", extraComponents)}");
+                                                }
+                                                
+                                                // Verify numeric fields
+                                                bool durationMatch = savedSpell.Duration == spell.Duration;
+                                                bool degradeModMatch = savedSpell.DegradeModifier == spell.DegradeModifier;
+                                                bool degradeLimitMatch = savedSpell.DegradeLimit == spell.DegradeLimit;
+                                                bool rangeModMatch = savedSpell.BaseRangeMod == spell.BaseRangeMod;
+                                                bool recoveryAmountMatch = savedSpell.RecoveryAmount == spell.RecoveryAmount;
+                                                bool bitfieldMatch = savedSpell.Bitfield == spell.Bitfield;
+                                                
+                                                Debug.WriteLine($"Verification Results:");
+                                                Debug.WriteLine($"- Core Values: School Match: {schoolMatch}, Category Match: {categoryMatch}, Type Match: {typeMatch}");
+                                                Debug.WriteLine($"- Components: Count Match: {componentCountMatch}, All Match: {allComponentsMatch}");
+                                                Debug.WriteLine($"- Numeric Values: Duration: {durationMatch}, DegradeMod: {degradeModMatch}, DegradeLimit: {degradeLimitMatch}");
+                                                Debug.WriteLine($"- More Values: RangeMod: {rangeModMatch}, RecoveryAmount: {recoveryAmountMatch}, Bitfield: {bitfieldMatch}");
                                             }
                                         }
                                     }
@@ -1083,6 +1259,36 @@ namespace ACME.Renderers
                     
                     await errorDialog.ShowAsync();
                 }
+
+                // Debug log after updating
+                Debug.WriteLine("=== SPELL AFTER UPDATE ===");
+                Debug.WriteLine($"Name: {spell.Name}");
+                Debug.WriteLine($"Description: {spell.Description}");
+                Debug.WriteLine($"School: {spell.School} ({(int)spell.School})");
+                Debug.WriteLine($"Category: {spell.Category} ({(int)spell.Category})");
+                Debug.WriteLine($"MetaSpellType: {spell.MetaSpellType} ({(int)spell.MetaSpellType})");
+                Debug.WriteLine($"MetaSpellId: {spell.MetaSpellId}");
+                Debug.WriteLine($"Bitfield: {spell.Bitfield}");
+                Debug.WriteLine($"Components: {string.Join(", ", spell.Components)}");
+                Debug.WriteLine($"BaseMana: {spell.BaseMana}");
+                Debug.WriteLine($"BaseRangeConstant: {spell.BaseRangeConstant}");
+                Debug.WriteLine($"BaseRangeMod: {spell.BaseRangeMod}");
+                Debug.WriteLine($"Power: {spell.Power}");
+                Debug.WriteLine($"SpellEconomyMod: {spell.SpellEconomyMod}");
+                Debug.WriteLine($"FormulaVersion: {spell.FormulaVersion}");
+                Debug.WriteLine($"ComponentLoss: {spell.ComponentLoss}");
+                Debug.WriteLine($"Duration: {spell.Duration}");
+                Debug.WriteLine($"DegradeModifier: {spell.DegradeModifier}");
+                Debug.WriteLine($"DegradeLimit: {spell.DegradeLimit}");
+                Debug.WriteLine($"PortalLifetime: {spell.PortalLifetime}");
+                Debug.WriteLine($"CasterEffect: {spell.CasterEffect}");
+                Debug.WriteLine($"TargetEffect: {spell.TargetEffect}");
+                Debug.WriteLine($"FizzleEffect: {spell.FizzleEffect}");
+                Debug.WriteLine($"RecoveryInterval: {spell.RecoveryInterval}");
+                Debug.WriteLine($"RecoveryAmount: {spell.RecoveryAmount}");
+                Debug.WriteLine($"DisplayOrder: {spell.DisplayOrder}");
+                Debug.WriteLine($"NonComponentTargetType: {spell.NonComponentTargetType}");
+                Debug.WriteLine($"ManaMod: {spell.ManaMod}");
             }
         }
     }
