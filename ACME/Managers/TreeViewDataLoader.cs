@@ -889,6 +889,40 @@ namespace ACME.Managers
 
             // --- End Context Preparation ---
             
+            // --- Add SelectedItemId to context if applicable ---
+            // Ensure context is initialized before trying to add to it
+            if (context == null)
+            {
+                context = new Dictionary<string, object>();
+            }
+            
+            if (actualSelectedItem != null)
+            {
+                var itemType = actualSelectedItem.GetType();
+                var idProp = itemType.GetProperty("Id"); // Get the 'Id' property of the anonymous type
+                if (idProp != null)
+                {
+                    var idValue = idProp.GetValue(actualSelectedItem);
+                    if (idValue is EquipmentSet equipmentSetId) // Check if the ID is an EquipmentSet
+                    {
+                        context["SelectedItemId"] = equipmentSetId;
+                        Debug.WriteLine($"ItemListView_SelectionChanged: Added SelectedItemId = {equipmentSetId} to context for SpellSet.");
+                    }
+                     else if (idValue is uint generalId) // Handle uint IDs (Spells, Components etc.)
+                     {
+                         context["SelectedItemId"] = generalId;
+                         Debug.WriteLine($"ItemListView_SelectionChanged: Added SelectedItemId = {generalId} (uint) to context.");
+                     }
+                     // Add checks for other specific ID types if needed
+                }
+                 else
+                 {                    
+                     // It's possible the selected item doesn't have an 'Id' property (e.g., direct object display)
+                     Debug.WriteLine("ItemListView_SelectionChanged: Could not find 'Id' property on selected item's anonymous type, or selected item is not the expected type.");
+                 }
+            }
+            // --- End adding SelectedItemId ---
+
             // --- Special Handling for LanguageString Files from Range List (Keep existing logic) ---
             if (lastNode?.Identifier is NodeIdentifier nodeId && 
                 nodeId.FileId == DatFileIds.LanguageTableId && 

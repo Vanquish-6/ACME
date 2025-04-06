@@ -49,7 +49,7 @@ namespace ACME.Renderers
         private void RegisterRenderers()
         { 
             // Register by Type (Example - if we had a specific renderer for SpellSet)
-            // _renderers.Add(typeof(SpellSet), new SpellSetRenderer());
+            _renderers.Add(typeof(DatReaderWriter.Types.SpellSet), new SpellSetRenderer());
             
             // Using internal SpellBaseRenderer implementation
             _renderers.Add(typeof(DatReaderWriter.Types.SpellBase), new SpellBaseRenderer());
