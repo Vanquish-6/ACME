@@ -54,6 +54,9 @@ namespace ACME
             // ItemListView.SelectionChanged -= ItemListView_SelectionChanged; // Remove old handler (if it was attached in XAML or code)
             // ItemListView selection is now handled internally by TreeViewDataLoader
 
+            // --- Window Closing Event ---
+            this.Closed += MainWindow_Closed; // Ensure cleanup on close
+
             // --- Initial UI State ---
             UpdateStatusBar();
             _detailRenderer.ClearAndSetMessage("Use File > Open to load a .dat file."); // Initial instruction
@@ -184,6 +187,15 @@ namespace ACME
                 Debug.WriteLine($"  - {dbInfo.FileName} (Type: {dbInfo.Type}, ID: {dbId})");
             }
              Debug.WriteLine($"  Current DB Set in Manager: {(_databaseManager.CurrentDatabase != null)}");
+        }
+
+        /// <summary>
+        /// Handles the window closing event to ensure database resources are released.
+        /// </summary>
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            _databaseManager?.CloseAllDatabases(); // Dispose all open databases
+            Debug.WriteLine("MainWindow_Closed: Called CloseAllDatabases.");
         }
 
         // --------------------------------------------------

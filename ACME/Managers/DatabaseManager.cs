@@ -11,6 +11,7 @@ using DatReaderWriter.Options;
 using ACME.Constants;
 using Microsoft.UI.Xaml;
 using WinRT.Interop;
+using DatReaderWriter.Lib.IO.BlockAllocators;
 
 namespace ACME.Managers
 {
@@ -67,57 +68,71 @@ namespace ACME.Managers
                     // Try opening based on the detected type first
                     if (isCell)
                     {
-                        Action<DatDatabaseOptions> options = (opt) => { 
-                            opt.FilePath = file.Path; 
+                        Action<DatDatabaseOptions> optionsAction = (opt) => {
+                            opt.FilePath = file.Path;
                             opt.AccessType = DatAccessType.ReadWrite; // Always use ReadWrite
                         };
-                        newDb = new CellDatabase(options);
+                        var dbOptions = new DatDatabaseOptions();
+                        optionsAction(dbOptions); // Populate options object
+                        var streamAllocator = new StreamBlockAllocator(dbOptions); // Explicitly create StreamBlockAllocator
+                        newDb = new CellDatabase(optionsAction, streamAllocator); // Pass action AND allocator
                         dbType = DatabaseType.Cell;
-                        Debug.WriteLine($"Successfully loaded {file.Name} as CellDatabase.");
+                        Debug.WriteLine($"Successfully loaded {file.Name} as CellDatabase using StreamBlockAllocator.");
                     }
                     else
                     {
-                        Action<DatDatabaseOptions> options = (opt) => { 
-                            opt.FilePath = file.Path; 
+                        Action<DatDatabaseOptions> optionsAction = (opt) => {
+                            opt.FilePath = file.Path;
                             opt.AccessType = DatAccessType.ReadWrite; // Always use ReadWrite
                         };
-                        newDb = new PortalDatabase(options);
+                        var dbOptions = new DatDatabaseOptions();
+                        optionsAction(dbOptions); // Populate options object
+                        var streamAllocator = new StreamBlockAllocator(dbOptions); // Explicitly create StreamBlockAllocator
+                        newDb = new PortalDatabase(optionsAction, streamAllocator); // Pass action AND allocator
                         dbType = DatabaseType.Portal;
-                        Debug.WriteLine($"Successfully loaded {file.Name} as PortalDatabase.");
+                        Debug.WriteLine($"Successfully loaded {file.Name} as PortalDatabase using StreamBlockAllocator.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Failed to load {file.Name}: {ex.Message}");
-                    
-                    // Try the opposite type
+                    Debug.WriteLine($"Failed to load {file.Name} with StreamBlockAllocator (attempt 1): {ex.Message}");
+
+                    // Try the opposite type (also forcing StreamBlockAllocator)
                     try
                     {
-                        if (isCell)
+                        if (isCell) // Original detection was cell, failed, now try Portal
                         {
-                            Action<DatDatabaseOptions> options = (opt) => { 
-                                opt.FilePath = file.Path; 
+                            Action<DatDatabaseOptions> optionsAction = (opt) => {
+                                opt.FilePath = file.Path;
                                 opt.AccessType = DatAccessType.ReadWrite; // Always use ReadWrite
                             };
-                            newDb = new PortalDatabase(options);
+                            var dbOptions = new DatDatabaseOptions();
+                            optionsAction(dbOptions); // Populate options object
+                            var streamAllocator = new StreamBlockAllocator(dbOptions); // Explicitly create StreamBlockAllocator
+                            newDb = new PortalDatabase(optionsAction, streamAllocator); // Pass action AND allocator
                             dbType = DatabaseType.Portal;
-                            Debug.WriteLine($"Successfully loaded {file.Name} as PortalDatabase on second attempt.");
+                            Debug.WriteLine($"Successfully loaded {file.Name} as PortalDatabase using StreamBlockAllocator on second attempt.");
                         }
-                        else
+                        else // Original detection was portal, failed, now try Cell
                         {
-                            Action<DatDatabaseOptions> options = (opt) => { 
-                                opt.FilePath = file.Path; 
+                            Action<DatDatabaseOptions> optionsAction = (opt) => {
+                                opt.FilePath = file.Path;
                                 opt.AccessType = DatAccessType.ReadWrite; // Always use ReadWrite
                             };
-                            newDb = new CellDatabase(options);
+                            var dbOptions = new DatDatabaseOptions();
+                            optionsAction(dbOptions); // Populate options object
+                            var streamAllocator = new StreamBlockAllocator(dbOptions); // Explicitly create StreamBlockAllocator
+                            newDb = new CellDatabase(optionsAction, streamAllocator); // Pass action AND allocator
                             dbType = DatabaseType.Cell;
-                            Debug.WriteLine($"Successfully loaded {file.Name} as CellDatabase on second attempt.");
+                            Debug.WriteLine($"Successfully loaded {file.Name} as CellDatabase using StreamBlockAllocator on second attempt.");
                         }
                     }
                     catch (Exception exSecond)
                     {
-                        errorMessage = $"Failed to load {file.Name}: {exSecond.Message}";
-                        Debug.WriteLine($"Failed to load {file.Name} on second attempt: {exSecond.Message}");
+                        errorMessage = $"Failed to load {file.Name} with StreamBlockAllocator (attempt 2): {exSecond.Message}";
+                        Debug.WriteLine(errorMessage);
+                        // Make sure to clean up any partially created allocator if the second attempt fails
+                        (newDb?.BlockAllocator as IDisposable)?.Dispose();
                         return (false, errorMessage);
                     }
                 }
