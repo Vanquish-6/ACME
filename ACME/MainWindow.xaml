@@ -82,28 +82,50 @@
                                   ResizeDirection="Columns"/>
 
             <!-- List Pane -->
-            <ListView Grid.Column="2"
-                      x:Name="ItemListView"
-                      SelectionMode="Single">
-                <ListView.HeaderTemplate>
-                    <DataTemplate>
-                         <!-- Header could be dynamic based on TreeView selection -->
-                        <TextBlock Text="Items List" Style="{ThemeResource TitleTextBlockStyle}" Margin="12,8,0,8"/>
-                    </DataTemplate>
-                </ListView.HeaderTemplate>
-                <!-- Explicitly define ItemsPanel for virtualization -->
-                <ListView.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <VirtualizingStackPanel VirtualizationMode="Recycling" />
-                    </ItemsPanelTemplate>
-                </ListView.ItemsPanel>
-                <!-- Simple and direct item template for maximum compatibility -->
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding DisplayText, FallbackValue={Binding}}" FontWeight="SemiBold" Margin="0,2" />
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-            </ListView>
+            <!-- Wrap ListView and Filters in a Grid -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/> <!-- Row 0 for Filters -->
+                    <RowDefinition Height="*"/>    <!-- Row 1 for ListView -->
+                </Grid.RowDefinitions>
+
+                <!-- Filter Controls -->
+                <StackPanel x:Name="SpellFilterPanel" 
+                            Grid.Row="0" 
+                            Orientation="Vertical" 
+                            Margin="12,5,12,5" 
+                            Visibility="Collapsed">
+                    <TextBlock Text="Filter Spells:" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                    <TextBox x:Name="SpellNameFilterTextBox" 
+                             PlaceholderText="Filter by name..." 
+                             TextChanged="SpellNameFilterTextBox_TextChanged"/>
+                    <!-- Add more filters (e.g., ComboBox for School) here later -->
+                </StackPanel>
+
+                <!-- The actual ListView -->
+                <ListView Grid.Row="1" 
+                          x:Name="ItemListView"
+                          SelectionMode="Single">
+                    <ListView.HeaderTemplate>
+                        <DataTemplate>
+                            <!-- Header could be dynamic based on TreeView selection -->
+                            <TextBlock Text="Items List" Style="{ThemeResource TitleTextBlockStyle}" Margin="12,8,0,8"/>
+                        </DataTemplate>
+                    </ListView.HeaderTemplate>
+                    <!-- Explicitly define ItemsPanel for virtualization -->
+                    <ListView.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel VirtualizationMode="Recycling" />
+                        </ItemsPanelTemplate>
+                    </ListView.ItemsPanel>
+                    <!-- Simple and direct item template for maximum compatibility -->
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding DisplayText, FallbackValue={Binding}}" FontWeight="SemiBold" Margin="0,2" />
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
 
             <!-- Grid Splitter 2 -->
             <controls:GridSplitter Grid.Column="3"

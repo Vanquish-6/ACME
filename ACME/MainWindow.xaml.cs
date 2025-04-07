@@ -51,6 +51,7 @@ namespace ACME
             // --- Wire up Events ---
             _databaseManager.DatabasesChanged += DatabaseManager_DatabasesChanged;
             StructureTreeView.SelectionChanged += StructureTreeView_SelectionChanged; // Use TreeViewDataLoader
+            _treeViewDataLoader.RelevantDataViewChanged += TreeViewDataLoader_RelevantDataViewChanged; // Handle filter visibility
             // ItemListView.SelectionChanged -= ItemListView_SelectionChanged; // Remove old handler (if it was attached in XAML or code)
             // ItemListView selection is now handled internally by TreeViewDataLoader
 
@@ -216,5 +217,33 @@ namespace ACME
         // - LogLoadedDatabases (replaced with LogLoadedDatabasesForDebug)
         // --------------------------------------------------
 
+        /// <summary>
+        /// Event handler for the spell name filter TextBox.
+        /// Triggers filtering in the TreeViewDataLoader.
+        /// </summary>
+        private void SpellNameFilterTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_treeViewDataLoader != null && sender is TextBox filterBox)
+            {
+                _treeViewDataLoader.ApplySpellFilter(filterBox.Text);
+            }
+        }
+
+        /// <summary>
+        /// Shows or hides the spell filter panel based on the data context.
+        /// </summary>
+        private void TreeViewDataLoader_RelevantDataViewChanged(object? sender, RelevantDataViewChangedEventArgs e)
+        {
+            // Ensure UI updates happen on the UI thread
+            DispatcherQueue.TryEnqueue(() =>
+            {
+                SpellFilterPanel.Visibility = e.IsSpellViewRelevant ? Visibility.Visible : Visibility.Collapsed;
+                // If hiding, clear the filter text
+                if (!e.IsSpellViewRelevant)
+                {
+                    SpellNameFilterTextBox.Text = string.Empty;
+                }
+            });
+        }
     }
 }

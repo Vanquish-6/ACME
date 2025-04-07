@@ -24,6 +24,20 @@ using System.Dynamic;
 namespace ACME.Managers
 {
     /// <summary>
+    /// Event args for indicating relevance of the current data view for specific controls.
+    /// </summary>
+    public class RelevantDataViewChangedEventArgs : EventArgs
+    {
+        public bool IsSpellViewRelevant { get; } = false;
+        // Add flags for other relevant views if needed later
+
+        public RelevantDataViewChangedEventArgs(bool isSpellViewRelevant)
+        {
+            IsSpellViewRelevant = isSpellViewRelevant;
+        }
+    }
+
+    /// <summary>
     /// Manager class for handling data loading for TreeView selections
     /// </summary>
     public class TreeViewDataLoader
@@ -31,6 +45,7 @@ namespace ACME.Managers
         private readonly DatabaseManager _databaseManager;
         private readonly ListView _itemListView;
         private readonly DetailRenderer _detailRenderer;
+        private SpellTable? _currentSpellTable; // Store the currently loaded spell table for filtering
         
         /// <summary>
         /// Maintains a reference to the last successful node data for selection handling
@@ -46,6 +61,11 @@ namespace ACME.Managers
         /// Event raised when data loading completes
         /// </summary>
         public event EventHandler? DataLoadingCompleted;
+        
+        /// <summary>
+        /// Event raised when the data view changes relevance for specific UI controls (e.g., spell filter).
+        /// </summary>
+        public event EventHandler<RelevantDataViewChangedEventArgs>? RelevantDataViewChanged;
         
         public TreeViewDataLoader(DatabaseManager databaseManager, ListView itemListView, DetailRenderer detailRenderer)
         {
@@ -161,6 +181,11 @@ namespace ACME.Managers
             object? itemsSource = null;
             Debug.WriteLine($"Processing node with FileId: 0x{fileId:X8}, Subtype: {subtype}");
 
+            // Clear the current spell table reference when loading new data
+            _currentSpellTable = null; 
+            // Signal that the spell view is initially not relevant
+            RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(false));
+
             if (targetDb is PortalDatabase portalDb)
             {
                 if (fileId == DatFileIds.SpellTableId)
@@ -174,15 +199,17 @@ namespace ACME.Managers
                         _detailRenderer.ClearAndSetMessage($"Successfully read SpellTable file", isError: false);
                         if (string.IsNullOrEmpty(subtype) || subtype == "Spells")
                         {
+                            // --- START FILTERING LOGIC (Now uses helper method) ---
+                             _currentSpellTable = spellTable; // <-- Store the reference
                             _detailRenderer.ClearAndAddDefaultTitle();
-                            _detailRenderer.ClearAndSetMessage($"Total Spells: {spellTable.Spells?.Count ?? 0}", isError: false);
-                            _detailRenderer.ClearAndSetMessage($"Total Spell Sets: {spellTable.SpellsSets?.Count ?? 0}", isError: false);
-                            if (spellTable.Spells != null && spellTable.Spells.Count > 0)
-                            {
-                                itemsSource = spellTable.Spells.Select(s => new { Id = s.Key, Name = s.Value?.Name ?? "?", DisplayText = $"{s.Key}: {s.Value?.Name ?? "?"}", Value = s.Value }).OrderBy(s => s.Id).ToList();
-                                _detailRenderer.ClearAndSetMessage("Select a spell from the list.", isError: false);
-                            }
-                            else { _detailRenderer.ClearAndSetMessage("No spells found.", isError: false); }
+                            // Show total before filtering message
+                             _detailRenderer.AddInfoMessage($"Total Spells (Unfiltered): {spellTable.Spells?.Count ?? 0}");
+
+                             // Call the helper method with initial empty filters
+                            itemsSource = GetFilteredSpellItemsSource(spellTable, ""); 
+                            // Signal that the spell view IS now relevant
+                            RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(true));
+                            // --- END FILTERING LOGIC (Now uses helper method) ---
                         }
                         else if (subtype == "SpellSets")
                         {
@@ -396,6 +423,91 @@ namespace ACME.Managers
             return itemsSource;
         }
         
+        /// <summary>
+        /// Applies the current filters to the spell list view.
+        /// </summary>
+        public void ApplySpellFilter(string nameFilter /* TODO: Add other filter parameters */)
+        {
+            if (_currentSpellTable != null)
+            {
+                Debug.WriteLine($"ApplySpellFilter called with Name: '{nameFilter}'");
+                // Use the helper method to get the filtered source
+                object? filteredSource = GetFilteredSpellItemsSource(_currentSpellTable, nameFilter);
+                // Update the ListView's ItemsSource directly
+                _itemListView.ItemsSource = filteredSource;
+                // Ensure relevance is still true when applying filter successfully
+                 RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(true));
+            }
+            else
+            {
+                Debug.WriteLine("ApplySpellFilter called, but no SpellTable is currently loaded/selected.");
+                // Signal that the spell view is not relevant if filter is called inappropriately
+                 RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(false));
+                // Optionally clear the list or show a message if the spell node isn't active
+                // _itemListView.ItemsSource = null;
+                // _detailRenderer.AddInfoMessage("Select the 'Spells' node to enable filtering.");
+            }
+        }
+        
+        /// <summary>
+        /// Applies filters to a SpellTable and returns the ItemsSource for the ListView.
+        /// Also updates the DetailRenderer messages.
+        /// </summary>
+        private object? GetFilteredSpellItemsSource(SpellTable spellTable, string nameFilter /* TODO: Add other filters as parameters */)
+        {
+            object? itemsSource = null;
+            MagicSchool? schoolFilter = null; // Placeholder for future filter
+            uint? componentFilter = null; // Placeholder for future filter
+
+            if (spellTable.Spells != null && spellTable.Spells.Count > 0)
+            {
+                var filteredSpells = spellTable.Spells.Values.AsEnumerable(); // Start query
+
+                if (!string.IsNullOrWhiteSpace(nameFilter))
+                {
+                    filteredSpells = filteredSpells.Where(s => s.Name != null && s.Name.Contains(nameFilter, StringComparison.OrdinalIgnoreCase));
+                }
+                if (schoolFilter.HasValue) // Keep placeholder logic
+                {
+                    filteredSpells = filteredSpells.Where(s => s.School == schoolFilter.Value);
+                }
+                if (componentFilter.HasValue) // Keep placeholder logic
+                {
+                    // Ensure Components list is not null before checking
+                    filteredSpells = filteredSpells.Where(s => s.Components != null && s.Components.Contains(componentFilter.Value));
+                }
+
+                // Convert filtered results to list for the UI
+                // Need the original dictionary to get the Key (ID) back efficiently
+                var filteredList = filteredSpells
+                    .Select(s => 
+                    {
+                        // Find the key corresponding to this spell value
+                        // This isn't super efficient, but necessary if we need the ID display
+                        // An alternative is to pass the spell object directly and let the renderer handle ID lookup if needed
+                        var kvp = spellTable.Spells.FirstOrDefault(entry => entry.Value == s); 
+                        return new { Id = kvp.Key, Name = s.Name ?? "?", DisplayText = $"{kvp.Key}: {s.Name ?? "?"}", Value = s };
+                    })
+                    .OrderBy(s => s.Id)
+                    .ToList();
+                
+                itemsSource = filteredList;
+
+                // Update message based on filtering result
+                bool isFiltered = !string.IsNullOrWhiteSpace(nameFilter) || schoolFilter.HasValue || componentFilter.HasValue;
+                if (isFiltered) {
+                    _detailRenderer.ClearAndSetMessage($"Showing {filteredList.Count} matching spells. Select one.", isError: false);
+                } else {
+                    _detailRenderer.ClearAndSetMessage($"Listing all {filteredList.Count} spells. Select one.", isError: false);
+                }
+            }
+            else 
+            { 
+                _detailRenderer.ClearAndSetMessage("No spells found.", isError: false); 
+            }
+            return itemsSource;
+        }
+
         /// <summary>
         /// Checks if a file ID is likely the start of a range-based table.
         /// </summary>
