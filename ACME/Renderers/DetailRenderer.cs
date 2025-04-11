@@ -67,6 +67,8 @@ namespace ACME.Renderers
             _renderers.Add(typeof(SurfaceTexture), new SurfaceTextureRenderer());
             _renderers.Add(typeof(Surface), new SurfaceRenderer());
             // --- END NEW RENDERERS ---
+            _renderers.Add(typeof(Palette), new PaletteRenderer());
+            _renderers.Add(typeof(PaletteSet), new PaletteSetRenderer());
             
             // Add other context-specific renderers here
         }

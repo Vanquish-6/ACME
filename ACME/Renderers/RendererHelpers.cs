@@ -12,6 +12,10 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.UI.Text; // For FontWeights
+using Microsoft.UI.Xaml.Media.Imaging; // For WriteableBitmap
+using Windows.Storage.Streams; // For WriteableBitmap operations
+using System.Runtime.InteropServices.WindowsRuntime; // For AsStream / AsBuffer
+using Windows.UI; // For Color definition
 
 namespace ACME.Renderers
 {
@@ -189,6 +193,94 @@ namespace ACME.Renderers
         public static void AddErrorMessageToPanel(Panel panel, string message)
         {
              AddInfoMessageToPanel(panel, message, Microsoft.UI.Colors.Red);
+        }
+
+        /// <summary>
+        /// Creates and adds a visual preview of a color palette to the panel.
+        /// </summary>
+        /// <param name="parentPanel">The panel to add the preview to.</param>
+        /// <param name="colors">The list of colors in the palette.</param>
+        public static void AddPalettePreview(Panel parentPanel, List<DatReaderWriter.Types.ColorARGB> colors)
+        {
+            if (colors == null || colors.Count == 0) return;
+
+            const int blockSize = 10; // Pixel size of each color square (Increased)
+            const int maxPreviewBlocksPerRow = 64; // Max blocks horizontally (Increased further)
+            const int maxPreviewRows = 16; // Max rows vertically (Increased further)
+            const int spacing = 0; // Pixel spacing between blocks (Removed)
+
+            int actualBlocks = Math.Min(colors.Count, maxPreviewBlocksPerRow * maxPreviewRows);
+            int blocksPerRow = Math.Min(colors.Count, maxPreviewBlocksPerRow);
+            // Avoid division by zero if blocksPerRow becomes 0 (e.g., if colors.Count is 0 but actualBlocks > 0 somehow)
+            if (blocksPerRow <= 0) blocksPerRow = 1;
+            int numRows = (int)Math.Ceiling((double)actualBlocks / blocksPerRow);
+
+            // Adjust width/height calculation for spacing = 0
+            int bitmapWidth = blocksPerRow * (blockSize + spacing); 
+            int bitmapHeight = numRows * (blockSize + spacing);
+
+            if (bitmapWidth <= 0 || bitmapHeight <= 0) return; // Avoid creating 0-size bitmap
+
+            var writeableBitmap = new WriteableBitmap(bitmapWidth, bitmapHeight);
+            byte[] pixelData = new byte[bitmapWidth * bitmapHeight * 4]; // BGRA format
+
+            for (int i = 0; i < actualBlocks; i++)
+            {
+                // Determine the color to draw
+                int colorIndex = (colors.Count <= actualBlocks) ? i : (int)Math.Floor((double)i * colors.Count / actualBlocks);
+                colorIndex = Math.Min(colorIndex, colors.Count - 1); // Ensure valid index
+                var color = colors[colorIndex];
+
+                // Calculate the top-left corner of the block
+                int blockRow = i / blocksPerRow;
+                int blockCol = i % blocksPerRow;
+                int xOffset = blockCol * (blockSize + spacing);
+                int yOffset = blockRow * (blockSize + spacing);
+
+                // Draw the block into the pixel buffer
+                for (int y = 0; y < blockSize; y++)
+                {
+                    for (int x = 0; x < blockSize; x++)
+                    {
+                        int pixelX = xOffset + x;
+                        int pixelY = yOffset + y;
+                        int pixelIndex = (pixelY * bitmapWidth + pixelX) * 4;
+
+                        // Ensure we don't write outside the buffer bounds
+                        if (pixelIndex >= 0 && pixelIndex + 3 < pixelData.Length)
+                        {
+                            // Write color in BGRA format
+                            pixelData[pixelIndex + 0] = color.Blue;
+                            pixelData[pixelIndex + 1] = color.Green;
+                            pixelData[pixelIndex + 2] = color.Red;
+                            pixelData[pixelIndex + 3] = color.Alpha;
+                        }
+                    }
+                }
+            }
+
+            // Copy pixel data to the bitmap
+            using (var stream = writeableBitmap.PixelBuffer.AsStream())
+            {
+                stream.Write(pixelData, 0, pixelData.Length);
+            }
+
+            // Create an Image control to display the bitmap
+            var imageControl = new Image
+            {
+                Source = writeableBitmap,
+                Stretch = Stretch.None, // Keep original pixel size
+                HorizontalAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 5, 0, 5)
+            };
+
+            parentPanel.Children.Add(imageControl);
+
+            // Optionally add a note if not all colors are shown
+            if (colors.Count > actualBlocks)
+            {
+                // AddInfoMessageToPanel(parentPanel, $"(Previewing {actualBlocks} of {colors.Count} colors)", Microsoft.UI.Colors.DarkGray);
+            }
         }
 
         /// <summary>

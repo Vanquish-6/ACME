@@ -13,6 +13,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Shapes;
 using Windows.UI.Text; // FontStyle
+using DatReaderWriter.DBObjs; // <<< Added for Palette type check
 
 namespace ACME.Renderers
 {
