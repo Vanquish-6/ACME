@@ -222,6 +222,8 @@ namespace ACME.Managers
                             if (portalDbForRangeLoad.TryReadFile<SurfaceTexture>(fileIdToLoad, out var tex)) { loadedDbObj = tex; loadSuccess = true; } break;
                         case DatFileIds.MotionTableId: 
                             if (portalDbForRangeLoad.TryReadFile<MotionTable>(fileIdToLoad, out var mot)) { loadedDbObj = mot; loadSuccess = true; } break;
+                        case DatFileIds.RenderSurfaceId: 
+                            if (portalDbForRangeLoad.TryReadFile<RenderSurface>(fileIdToLoad, out var rs)) { loadedDbObj = rs; loadSuccess = true; } break;
                         default:
                             Debug.WriteLine($"ListViewSelectionHandler: No specific loader implemented for range ID 0x{originalRangeId:X8}. Cannot load concrete object.");
                             break;
@@ -356,6 +358,29 @@ namespace ACME.Managers
                  Window? mainWindow = WindowHelper.MainWindow;
                  if (mainWindow != null) { context["Window"] = mainWindow; }
             }
+
+            // --- BEGIN ADD DATABASE TO CONTEXT ---
+            // Ensure context is initialized
+            context ??= new Dictionary<string, object>();
+
+            // Add the database instance if available
+            if (relevantDb != null)
+            {
+                if (!context.ContainsKey("Database"))
+                {
+                    context.Add("Database", relevantDb);
+                    Debug.WriteLine($"ListViewSelectionHandler: Added Database (Type: {relevantDb.GetType().Name}) to context.");
+                }
+                else
+                {
+                    Debug.WriteLine("ListViewSelectionHandler: Context already contains a 'Database' key.");
+                }
+            }
+            else
+            {
+                Debug.WriteLine("ListViewSelectionHandler: relevantDb is null, cannot add Database to context.");
+            }
+            // --- END ADD DATABASE TO CONTEXT ---
 
             _detailRenderer.DisplayItemDetails(itemToDisplay, context); 
         }

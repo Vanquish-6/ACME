@@ -26,7 +26,7 @@ namespace ACME.Helpers
                    fileId == DatFileIds.SoundTableId || fileId == DatFileIds.SurfaceId || // Use SurfaceId
                    fileId == DatFileIds.SurfaceTextureId || fileId == DatFileIds.UILayoutId || // Use SurfaceTextureId, UILayoutId
                    fileId == DatFileIds.AnimationId || fileId == DatFileIds.LanguageStringDataId || // Use AnimationId, LanguageStringDataId
-                   fileId == DatFileIds.StringStateId; // Use StringStateId
+                   fileId == DatFileIds.StringStateId || fileId == DatFileIds.RenderSurfaceId; // Use StringStateId, RenderSurfaceId
         }
 
         /// <summary>

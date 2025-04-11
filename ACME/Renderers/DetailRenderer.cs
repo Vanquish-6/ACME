@@ -16,6 +16,7 @@ using DatReaderWriter.Types; // Needed for Position type check
 using DatReaderWriter.Enums; // For MagicSchool and SpellCategory enums
 using System.Threading.Tasks;
 using System.Globalization; // For NumberStyles in TryParse
+using DatReaderWriter.DBObjs; // Make sure DBObjs namespace is included
 
 namespace ACME.Renderers
 {
@@ -60,6 +61,11 @@ namespace ACME.Renderers
             
             // Register Animation renderer
             _renderers.Add(typeof(DatReaderWriter.DBObjs.Animation), new AnimationRenderer());
+            
+            // --- BEGIN NEW RENDERERS ---
+            _renderers.Add(typeof(RenderSurface), new RenderSurfaceRenderer());
+            _renderers.Add(typeof(SurfaceTexture), new SurfaceTextureRenderer());
+            // --- END NEW RENDERERS ---
             
             // Add other context-specific renderers here
         }
