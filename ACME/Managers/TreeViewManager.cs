@@ -158,12 +158,13 @@ namespace ACME.Managers
             TryAddNode(portalRoot, "Animations", DatFileIds.AnimationId, dbId);
             TryAddNode(portalRoot, "Animation Hook Ops", DatFileIds.AnimationHookOpId, dbId);
             TryAddNode(portalRoot, "Surface Textures", DatFileIds.SurfaceTextureId, dbId);
-            TryAddNode(portalRoot, "Render Surfaces", DatFileIds.RenderSurfaceId, dbId);
+            TryAddNode(portalRoot, "Textures", DatFileIds.RenderSurfaceId, dbId);
             TryAddNode(portalRoot, "Surfaces", DatFileIds.SurfaceId, dbId);
             TryAddNode(portalRoot, "Motion Tables", DatFileIds.MotionTableId, dbId);
             TryAddNode(portalRoot, "Sound Tables", DatFileIds.SoundTableId, dbId);
             TryAddNode(portalRoot, "Sound Resources", DatFileIds.SoundResourceId, dbId);
             TryAddNode(portalRoot, "Palettes", DatFileIds.PaletteId, dbId);
+            TryAddNode(portalRoot, "Palette Sets", DatFileIds.PaletteSetId, dbId);
             TryAddNode(portalRoot, "Clothing", DatFileIds.ClothingTableId, dbId);
             TryAddNode(portalRoot, "Regions", DatFileIds.RegionId, dbId);
             TryAddNode(portalRoot, "Keymaps", DatFileIds.KeymapId, dbId);
@@ -313,19 +314,44 @@ namespace ACME.Managers
         /// </summary>
         private bool IsPredefinedProperty(string propertyName)
         {
-            // List of property names we're adding manually to avoid duplicates
+            // List of property names from PortalDatabase that are handled manually via TryAddNode
+            // This prevents the dynamic loop from adding them again.
+            // Note: Names must EXACTLY match the PortalDatabase property names (case-sensitive).
             string[] predefinedProps = new[] {
-                "SpellTable", 
+                // Single-file object properties (won't be picked up by IEnumerable loop, but kept for clarity)
                 "CharGen", 
-                "Animation", "AnimationHooks", "ChatEmotes", "Clothing", 
-                "CombatTable", "Dungeons", "ExperienceTable", "FileMap", "GameEventTable", 
-                "Generators", "GfxObjs", "LanguageStrings", "Materials", "MotionTables", 
-                "Palette", "ParticleEmitters", "QualityFilters", "RenderMaterials", "SkillTable", 
-                "Sounds", "SpellComponentsTable", "StringStateTable", "Surfaces", 
-                "Textures", "UILayouts", "VitalTable", "WeenieDefaults"
+                "ChatPoseTable", 
+                "CombatTable", 
+                "ExperienceTable", 
+                "GameEventTable", 
+                "SkillTable", 
+                "SpellComponentTable", 
+                "SpellTable", // Handles Spells/SpellSets sub-nodes manually
+                "TabooTable", 
+                "WeenieDefaults",
+                // Collection properties handled by TryAddNode
+                "Animations",
+                "Clothings",
+                "GfxObjs",
+                "Keymaps",
+                "LanguageStrings",
+                "MotionTables",
+                "Palettes",
+                "PaletteSets",
+                "ParticleEmitters",
+                "PhysicsScripts",
+                "Regions",
+                "RenderSurfaces",
+                "Scenes",
+                "Setups",
+                "Surfaces",
+                "SurfaceTextures",
+                // Property names NOT listed here (e.g., Waves, Environments, MaterialModifiers, etc.) 
+                // will be added dynamically by the loop, which is intended.
             };
             
-            return predefinedProps.Any(p => p.Equals(propertyName, StringComparison.OrdinalIgnoreCase));
+            // Use Ordinal comparison for exact, case-sensitive matching
+            return predefinedProps.Any(p => p.Equals(propertyName, StringComparison.Ordinal)); 
         }
         
         /// <summary>

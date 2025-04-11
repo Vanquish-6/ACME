@@ -404,7 +404,32 @@ namespace ACME.Managers
                      }
                      else { _detailRenderer.ClearAndSetMessage("Failed to load CharGen data.", isError: true); }
                  }
-                 // --- File Range Tables (Restored LanguageTableId to IsRangeTableId) ---
+                 // --- Handle PaletteSetId specifically ---
+                 else if (fileId == DatFileIds.PaletteSetId)
+                 {
+                     displayDirectly = false;
+                     try
+                     {
+                         _detailRenderer.ClearAndAddDefaultTitle();
+                         if (portalDb.PaletteSets != null && portalDb.PaletteSets.Count() > 0)
+                         {
+                            // Assuming PaletteSet has an Id property. Adjust if needed.
+                            itemsSource = portalDb.PaletteSets
+                                .Select(ps => new { Id = ps.Id, DisplayText = $"PaletteSet 0x{ps.Id:X8}", Value = ps })
+                                .OrderBy(ps => ps.Id)
+                                .ToList();
+                            _detailRenderer.AddInfoMessage($"Found {portalDb.PaletteSets.Count()} Palette Sets. Select one from the list.");
+                         }
+                         else
+                         {
+                            _detailRenderer.AddInfoMessage("No Palette Sets found.");
+                            itemsSource = null;
+                         }
+                     }
+                     catch (Exception psEx)
+                     { Debug.WriteLine($"Error getting Palette Sets: {psEx.Message}"); _detailRenderer.ClearAndSetMessage("Error listing Palette Sets.", isError: true); itemsSource = null; }
+                 }
+                 // --- Generic File Range Tables (Catch-all for other ranges) ---
                  else if (DatParsingHelpers.IsRangeTableId(fileId))
                  {
                      displayDirectly = false; // Ensure range tables are listed first
