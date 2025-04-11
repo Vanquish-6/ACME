@@ -9,11 +9,18 @@ using DatReaderWriter.Enums;
 using DatReaderWriter; // For DatDatabase
 using DatReaderWriter.Types; // For ColorARGB
 using SixLabors.ImageSharp; // Main ImageSharp
+using SixLabors.ImageSharp.Formats; // For Configuration, ImageFormatManager
 using SixLabors.ImageSharp.PixelFormats; // For Rgba32, etc.
 using SixLabors.ImageSharp.Processing; // For image operations if needed
+using BCnEncoder.Decoder; // Added for BCnEncoder
+using BCnEncoder.Shared;  // Added for BCnEncoder
 using Microsoft.UI;
 using Windows.Storage.Streams;
 using UIImage = Microsoft.UI.Xaml.Controls.Image; // Alias for WinUI Image
+using System.IO; // For MemoryStream (still needed for WriteableBitmap conversion)
+
+// Alias ImageSharp Rgba32 to avoid conflict with BCnEncoder's ColorRgba32
+using ImageSharpRgba32 = SixLabors.ImageSharp.PixelFormats.Rgba32;
 
 namespace ACME.Renderers
 {
@@ -143,7 +150,73 @@ namespace ACME.Renderers
                             break;
                             // --- End Paletted Format --- 
 
-                        // TODO: Add cases for other formats like DXT, JPEG etc.
+                        case PixelFormat.PFID_DXT1: // BC1
+                            try
+                            {
+                                var decoder = new BcDecoder();
+                                // Decode the BC1/DXT1 data
+                                ColorRgba32[] decodedPixelStructs = decoder.DecodeRaw(sourceData, width, height, CompressionFormat.Bc1);
+
+                                if (decodedPixelStructs != null && decodedPixelStructs.Length == width * height)
+                                {
+                                    // Convert BCnEncoder.ColorRgba32[] to SixLabors.ImageSharp.PixelFormats.Rgba32[]
+                                    ImageSharpRgba32[] imageSharpPixels = new ImageSharpRgba32[decodedPixelStructs.Length];
+                                    for (int i = 0; i < decodedPixelStructs.Length; i++)
+                                    {
+                                        var bcPixel = decodedPixelStructs[i];
+                                        imageSharpPixels[i] = new ImageSharpRgba32(bcPixel.r, bcPixel.g, bcPixel.b, bcPixel.a);
+                                    }
+
+                                    // Load the ImageSharp-compatible pixel data
+                                    image = SixLabors.ImageSharp.Image.LoadPixelData<ImageSharpRgba32>(imageSharpPixels, width, height);
+                                }
+                                else
+                                {
+                                    errorMessage = "BCnEncoder failed to decode BC1 or returned unexpected pixel data size.";
+                                }
+                            }
+                            catch (Exception bcEx)
+                            {
+                                errorMessage = $"Failed to decode DXT1/BC1 data using BCnEncoder: {bcEx.Message}";
+                                Debug.WriteLine($"BCnEncoder DXT1 Decoding Error: {bcEx}");
+                            }
+                            break;
+
+                        case PixelFormat.PFID_DXT5: // BC3
+                            try
+                            {
+                                var decoder = new BcDecoder();
+                                // Decode to BCnEncoder's ColorRgba32 format
+                                ColorRgba32[] decodedPixelStructs = decoder.DecodeRaw(sourceData, width, height, CompressionFormat.Bc3);
+
+                                if (decodedPixelStructs != null && decodedPixelStructs.Length == width * height)
+                                {
+                                    // Convert BCnEncoder.ColorRgba32[] to SixLabors.ImageSharp.PixelFormats.Rgba32[]
+                                    ImageSharpRgba32[] imageSharpPixels = new ImageSharpRgba32[decodedPixelStructs.Length];
+                                    for (int i = 0; i < decodedPixelStructs.Length; i++)
+                                    {
+                                        var bcPixel = decodedPixelStructs[i];
+                                        imageSharpPixels[i] = new ImageSharpRgba32(bcPixel.r, bcPixel.g, bcPixel.b, bcPixel.a);
+                                    }
+
+                                    // Load the ImageSharp-compatible pixel data
+                                    image = SixLabors.ImageSharp.Image.LoadPixelData<ImageSharpRgba32>(imageSharpPixels, width, height);
+                                }
+                                else
+                                {
+                                    errorMessage = "BCnEncoder failed to decode or returned unexpected pixel data size.";
+                                }
+                            }
+                            catch (Exception bcEx)
+                            {
+                                errorMessage = $"Failed to decode DXT5/BC3 data using BCnEncoder: {bcEx.Message}";
+                                Debug.WriteLine($"BCnEncoder DXT5 Decoding Error: {bcEx}");
+                            }
+                            break;
+
+                        // TODO: Add cases for other formats like DXT1, DXT3, JPEG etc.
+                        // DXT1 would be CompressionFormat.Bc1
+                        // DXT3 would be CompressionFormat.Bc2
                         default:
                             errorMessage = $"Pixel format {renderSurface.Format} is not currently supported for preview.";
                             break;

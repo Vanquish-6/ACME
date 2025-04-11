@@ -212,17 +212,17 @@ namespace ACME.Managers
                  {
                      switch (originalRangeId)
                      {
-                        case DatFileIds.AnimationId: 
+                        case DatFileIds.AnimationId:
                             if (portalDbForRangeLoad.TryReadFile<Animation>(fileIdToLoad, out var anim)) { loadedDbObj = anim; loadSuccess = true; } break;
-                        case DatFileIds.PaletteId: 
+                        case DatFileIds.PaletteId:
                             if (portalDbForRangeLoad.TryReadFile<Palette>(fileIdToLoad, out var pal)) { loadedDbObj = pal; loadSuccess = true; } break;
-                        case DatFileIds.SurfaceId: 
+                        case DatFileIds.SurfaceId:
                             if (portalDbForRangeLoad.TryReadFile<Surface>(fileIdToLoad, out var surf)) { loadedDbObj = surf; loadSuccess = true; } break;
-                        case DatFileIds.SurfaceTextureId: 
+                        case DatFileIds.SurfaceTextureId:
                             if (portalDbForRangeLoad.TryReadFile<SurfaceTexture>(fileIdToLoad, out var tex)) { loadedDbObj = tex; loadSuccess = true; } break;
-                        case DatFileIds.MotionTableId: 
+                        case DatFileIds.MotionTableId:
                             if (portalDbForRangeLoad.TryReadFile<MotionTable>(fileIdToLoad, out var mot)) { loadedDbObj = mot; loadSuccess = true; } break;
-                        case DatFileIds.RenderSurfaceId: 
+                        case DatFileIds.RenderSurfaceId:
                             if (portalDbForRangeLoad.TryReadFile<RenderSurface>(fileIdToLoad, out var rs)) { loadedDbObj = rs; loadSuccess = true; } break;
                         default:
                             Debug.WriteLine($"ListViewSelectionHandler: No specific loader implemented for range ID 0x{originalRangeId:X8}. Cannot load concrete object.");
