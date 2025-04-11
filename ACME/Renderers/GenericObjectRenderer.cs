@@ -24,6 +24,20 @@ namespace ACME.Renderers
         private const int MaxItemsToShow = 50; // Consider moving to RendererHelpers or config
         private const int MaxRecursionDepth = 5;
 
+        // Constants for Member Names
+        private const string IdPropertyName = "Id";
+        private const string NamePropertyName = "Name";
+        private const string HeaderFlagsPropertyName = "HeaderFlags";
+        private const string DbObjTypePropertyName = "DBObjType";
+        private const string DataCategoryPropertyName = "DataCategory";
+        private const string ComponentsPropertyName = "Components";
+        private const string PrimaryStartAreasPropertyName = "PrimaryStartAreas";
+        private const string SecondaryStartAreasPropertyName = "SecondaryStartAreas";
+        private const string SpellsPropertyName = "Spells";
+        private const string KeyPropertyName = "Key";
+        private const string ValuePropertyName = "Value";
+        private const string FramePropertyName = "Frame"; // Added for RenderPosition
+
         public void Render(Panel targetPanel, object data, Dictionary<string, object>? context)
         {
             Debug.WriteLine($"--- GenericObjectRenderer.Render called with data type: {data?.GetType().FullName ?? "null"} ---"); // Diagnostic message
@@ -34,8 +48,15 @@ namespace ACME.Renderers
 
             var propertiesPanel = new StackPanel() { Margin = new Thickness(0, 0, 0, 20) }; // Use 0 left margin as DetailRenderer adds padding
 
+            // --- SPECIAL: KeyValuePair<string, string> for Chat Poses ---
+            if (data is KeyValuePair<string, string> stringPair)
+            {
+                RendererHelpers.AddSimplePropertyRow(propertiesPanel, "Pose Name:", stringPair.Key);
+                RendererHelpers.AddSimplePropertyRow(propertiesPanel, "Action:", stringPair.Value);
+            }
+            // --- END SPECIAL ---
             // --- NEW: Check if data is a dictionary first ---
-            if (data is IDictionary dictionary)
+            else if (data is IDictionary dictionary)
             {
                 RenderDictionary(propertiesPanel, dictionary, context, 0); // Start rendering the dictionary
             }
@@ -51,8 +72,8 @@ namespace ACME.Renderers
                 var allMembers = RendererHelpers.GetObjectMembers(data);
 
                 // --- Display Id and Name first ---
-                var idMember = allMembers.FirstOrDefault(m => string.Equals(m.Name, "Id", StringComparison.OrdinalIgnoreCase));
-                var nameMember = allMembers.FirstOrDefault(m => string.Equals(m.Name, "Name", StringComparison.OrdinalIgnoreCase));
+                var idMember = allMembers.FirstOrDefault(m => string.Equals(m.Name, IdPropertyName, StringComparison.OrdinalIgnoreCase));
+                var nameMember = allMembers.FirstOrDefault(m => string.Equals(m.Name, NamePropertyName, StringComparison.OrdinalIgnoreCase));
 
                 bool displayedHeader = false;
                 if (idMember != null)
@@ -74,15 +95,15 @@ namespace ACME.Renderers
 
                 // Get remaining members, filter out Id/Name, sort alphabetically
                 var remainingMembers = allMembers
-                    .Where(m => !(string.Equals(m.Name, "Id", StringComparison.OrdinalIgnoreCase) ||
-                                   string.Equals(m.Name, "Name", StringComparison.OrdinalIgnoreCase)))
+                    .Where(m => !(string.Equals(m.Name, IdPropertyName, StringComparison.OrdinalIgnoreCase) ||
+                                   string.Equals(m.Name, NamePropertyName, StringComparison.OrdinalIgnoreCase)))
                     .OrderBy(m => m.Name);
 
                 foreach (var member in remainingMembers)
                 {
                     // Skip common base members from DBObj unless they are Id/Name (already handled or skipped)
                     var declaringTypeName = member.DeclaringType?.Name ?? string.Empty;
-                    if (declaringTypeName == "DBObj" && (member.Name == "HeaderFlags" || member.Name == "DBObjType" || member.Name == "DataCategory"))
+                    if (declaringTypeName == "DBObj" && (member.Name == HeaderFlagsPropertyName || member.Name == DbObjTypePropertyName || member.Name == DataCategoryPropertyName))
                     {
                         continue;
                     }
@@ -107,8 +128,10 @@ namespace ACME.Renderers
         /// </summary>
         private void DisplaySingleMember(StackPanel panel, dynamic member, Dictionary<string, object>? displayContext, int currentDepth)
         {
+            string memberName = "Unknown Member"; // Default name in case of early error
             try
             {
+                memberName = member.Name; // Get name early for error message
                 var memberGrid = new Grid();
                 memberGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = GridLength.Auto });
                 memberGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(1, GridUnitType.Star) });
@@ -133,13 +156,19 @@ namespace ACME.Renderers
                 Grid.SetColumn(valuePanel, 1);
                 memberGrid.Children.Add(valuePanel);
 
-                AddPropertyValue(valuePanel, member.Value, member.Name, displayContext, currentDepth);
+                AddPropertyValue(valuePanel, member.Value, memberName, displayContext, currentDepth);
 
                 panel.Children.Add(memberGrid);
             }
-            catch (Exception ex)
+            catch (TargetInvocationException tie) // Specific exception for issues within the invoked member
             {
-                RendererHelpers.AddErrorMessageToPanel(panel, $"Error reading member '{member.Name}': {ex.Message}");
+                 Debug.WriteLine($"GenericObjectRenderer: TargetInvocationException rendering member '{memberName}': {tie.InnerException?.Message ?? tie.Message}");
+                 RendererHelpers.AddErrorMessageToPanel(panel, $"Error accessing member '{memberName}': {tie.InnerException?.Message ?? tie.Message}");
+            }
+            catch (Exception ex) // General fallback
+            {
+                Debug.WriteLine($"GenericObjectRenderer: Exception rendering member '{memberName}': {ex.Message}");
+                RendererHelpers.AddErrorMessageToPanel(panel, $"Error reading member '{memberName}': {ex.Message}");
             }
         }
 
@@ -194,16 +223,16 @@ namespace ACME.Renderers
                 if (elementType == typeof(uint) || elementType == typeof(int))
                 {
                     string potentialLookupKey = memberName switch {
-                        "Components" => "ComponentLookup",
-                        "PrimaryStartAreas" => "StartAreaLookup",
-                        "SecondaryStartAreas" => "StartAreaLookup",
-                        "Spells" => "SpellLookup",
+                        ComponentsPropertyName => "ComponentLookup",
+                        PrimaryStartAreasPropertyName => "StartAreaLookup",
+                        SecondaryStartAreasPropertyName => "StartAreaLookup",
+                        SpellsPropertyName => "SpellLookup",
                         _ => memberName + "Lookup" // Generic fallback
                     };
 
                     // Use RendererHelpers.RenderCollectionWithLookup
                     collectionHandledByLookup = RendererHelpers.RenderCollectionWithLookup(panel, enumerableValue, potentialLookupKey, displayContext, currentDepth);
-                    if (!collectionHandledByLookup && (memberName == "Components" || memberName == "Spells" || memberName == "PrimaryStartAreas" || memberName == "SecondaryStartAreas"))
+                    if (!collectionHandledByLookup && (memberName == ComponentsPropertyName || memberName == SpellsPropertyName || memberName == PrimaryStartAreasPropertyName || memberName == SecondaryStartAreasPropertyName))
                     {
                          Debug.WriteLine($"GenericRenderer: No specific lookup key '{potentialLookupKey}' found in context for collection '{memberName}'. Standard rendering will apply.");
                     }
@@ -302,20 +331,20 @@ namespace ACME.Renderers
             }
 
             // Get Key and Value using reflection (since we don't know the generic types)
-            var keyProp = kvpType.GetProperty("Key");
-            var valueProp = kvpType.GetProperty("Value");
+            var keyProp = kvpType.GetProperty(KeyPropertyName);
+            var valueProp = kvpType.GetProperty(ValuePropertyName);
 
             object? key = keyProp?.GetValue(kvpObject);
             object? value = valueProp?.GetValue(kvpObject);
 
             var keyPanel = new StackPanel { Orientation = Orientation.Horizontal };
             keyPanel.Children.Add(new TextBlock { Text = "Key:", FontWeight = FontWeightValues.SemiBold, Margin = new Thickness(0, 0, 8, 0) });
-            AddPropertyValue(keyPanel, key, "Key", context, currentDepth + 1); // Recurse for key
+            AddPropertyValue(keyPanel, key, KeyPropertyName, context, currentDepth + 1); // Recurse for key
             panel.Children.Add(keyPanel);
 
             var valuePanel = new StackPanel { Margin = new Thickness(12, 4, 0, 0) }; 
             valuePanel.Children.Add(new TextBlock { Text = "Value:", FontWeight = FontWeightValues.SemiBold, Margin = new Thickness(0, 0, 8, 4) });
-            AddPropertyValue(valuePanel, value, "Value", context, currentDepth + 1); // Recurse for value
+            AddPropertyValue(valuePanel, value, ValuePropertyName, context, currentDepth + 1); // Recurse for value
             panel.Children.Add(valuePanel);
         }
 
@@ -348,11 +377,11 @@ namespace ACME.Renderers
 
                  var keyPanel = new StackPanel { Orientation = Orientation.Horizontal };
                  keyPanel.Children.Add(new TextBlock { Text = "Key:", FontWeight = FontWeightValues.SemiBold, Margin = new Thickness(0, 0, 8, 0) });
-                 AddPropertyValue(keyPanel, entry.Key, "Key", context, currentDepth + 1);
+                 AddPropertyValue(keyPanel, entry.Key, KeyPropertyName, context, currentDepth + 1);
                  entryPanel.Children.Add(keyPanel);
 
                  var valuePanel = new StackPanel { Margin = new Thickness(12, 4, 0, 0) };
-                 AddPropertyValue(valuePanel, entry.Value, "Value", context, currentDepth + 1);
+                 AddPropertyValue(valuePanel, entry.Value, ValuePropertyName, context, currentDepth + 1);
                  entryPanel.Children.Add(valuePanel);
 
                  itemsPanel.Children.Add(entryPanel);
@@ -451,7 +480,7 @@ namespace ACME.Renderers
                   // Skip common base members from DBObj in nested views too?
                  var declaringTypeName = member.DeclaringType?.Name ?? string.Empty;
                  if (declaringTypeName == "DBObj" && 
-                     (member.Name == "HeaderFlags" || member.Name == "DBObjType" || member.Name == "DataCategory" || member.Name == "Id" || member.Name == "Name"))
+                     (member.Name == HeaderFlagsPropertyName || member.Name == DbObjTypePropertyName || member.Name == DataCategoryPropertyName || member.Name == IdPropertyName || member.Name == NamePropertyName))
                  {
                      continue; // Skip base props and Id/Name in nested view
                  }

@@ -42,10 +42,19 @@ namespace ACME
             _databaseManager = new DatabaseManager();
             _treeViewManager = new TreeViewManager(StructureTreeView); // Pass TreeView control
             _detailRenderer = new DetailRenderer(DetailStackPanel); // Pass Detail panel
+
+            // Create dependencies for TreeViewDataLoader
+            var listViewSelectionHandler = new ListViewSelectionHandler(_databaseManager, _detailRenderer, ItemListView);
+            var spellFilterManager = new SpellFilterManager();
+            var spellLoader = new SpellLoader(spellFilterManager, _detailRenderer);
+
             _treeViewDataLoader = new TreeViewDataLoader(
                 _databaseManager,
                 ItemListView,       // Pass ListView control
-                _detailRenderer     // Pass DetailRenderer instance
+                _detailRenderer,    // Pass DetailRenderer instance
+                listViewSelectionHandler, // Pass handlers
+                spellFilterManager,
+                spellLoader
             );
 
             // --- Wire up Events ---
@@ -68,7 +77,6 @@ namespace ACME
         /// </summary>
         private void DatabaseManager_DatabasesChanged(object? sender, DatabasesChangedEventArgs e)
         {
-            // Clear and repopulate the TreeView based on the new list of databases
             _treeViewManager.ClearTreeView();
             foreach (var dbInfo in e.LoadedDatabases)
             {
@@ -83,23 +91,32 @@ namespace ACME
                  }
             }
 
-            // Update status bar
             UpdateStatusBar(e.LoadedDatabases);
 
-            // Reset list and detail views if databases changed
-            ItemListView.ItemsSource = null;
-             if (e.LoadedDatabases.Count == 0)
-             {
-                  _detailRenderer.ClearAndSetMessage("No databases loaded. Use File > Open.");
-             }
-             else if (e.AddedDatabase != null)
-             {
-                 // If a specific DB was added/removed, maybe show a generic message
-                 _detailRenderer.ClearAndSetMessage("Database list updated. Select an item from the tree.");
-             }
-             // Else (initial load?), keep the existing message or update as needed
+            // Update detail view based on database changes
+            UpdateDetailMessageAfterDbChange(e);
 
+#if DEBUG
             LogLoadedDatabasesForDebug();
+#endif
+        }
+
+        /// <summary>
+        /// Updates the detail message panel based on the database change event.
+        /// </summary>
+        private void UpdateDetailMessageAfterDbChange(DatabasesChangedEventArgs e)
+        {
+            ItemListView.ItemsSource = null; // Clear the list view
+            if (e.LoadedDatabases.Count == 0)
+            {
+                _detailRenderer.ClearAndSetMessage("No databases loaded. Use File > Open.");
+            }
+            else if (e.AddedDatabase != null) // Consider if other cases need messages (e.g., closing last DB)
+            {
+                _detailRenderer.ClearAndSetMessage("Database list updated. Select an item from the tree.");
+            }
+            // If a database was removed but others remain, we might not need a specific message,
+            // as the user likely initiated the close.
         }
 
         /// <summary>
@@ -108,13 +125,21 @@ namespace ACME
         /// </summary>
         private async void StructureTreeView_SelectionChanged(TreeView sender, TreeViewSelectionChangedEventArgs args)
         {
-            if (_treeViewDataLoader != null)
+            try
             {
-                // Extract the newly selected node from the event args
-                TreeViewNode? selectedNode = args.AddedItems.FirstOrDefault() as TreeViewNode; // Get the specific node
-
-                // Pass the selected node directly to the processing method
-                await _treeViewDataLoader.ProcessTreeViewSelectionAsync(selectedNode); // Call the updated method
+                if (_treeViewDataLoader != null)
+                {
+                    TreeViewNode? selectedNode = args.AddedItems.FirstOrDefault() as TreeViewNode; // Get the specific node
+                    await _treeViewDataLoader.ProcessTreeViewSelectionAsync(selectedNode); // Call the updated method
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (using Debug.WriteLine for simplicity, consider a proper logging framework)
+                Debug.WriteLine($"Error in StructureTreeView_SelectionChanged: {ex.Message}");
+                Debug.WriteLine(ex.StackTrace);
+                // Optionally, inform the user
+                _detailRenderer?.ClearAndSetMessage($"An error occurred processing the selection: {ex.Message}", isError: true);
             }
         }
 
@@ -123,25 +148,34 @@ namespace ACME
         /// </summary>
         private async void OpenMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            // Clear previous views immediately for better feedback
-            ItemListView.ItemsSource = null;
-            _detailRenderer.ClearAndSetMessage("Opening file...");
-
-            var (success, errorMessage) = await _databaseManager.PickAndLoadDatabaseAsync(this);
-
-            if (!success)
+            try
             {
-                if (!string.IsNullOrEmpty(errorMessage))
-                {   // Show error if loading failed
-                    _detailRenderer.ClearAndSetMessage($"Error loading file: {errorMessage}", isError: true);
-                    Debug.WriteLine($"Error loading file: {errorMessage}");
-                }
-                else
-                {   // User cancelled picker - restore previous message or show default
-                    _detailRenderer.ClearAndSetMessage("File open cancelled or no databases loaded.");
+                ItemListView.ItemsSource = null;
+                _detailRenderer.ClearAndSetMessage("Opening file...");
+
+                var (success, errorMessage) = await _databaseManager.PickAndLoadDatabaseAsync(this);
+
+                if (!success)
+                {
+                    if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        _detailRenderer.ClearAndSetMessage($"Error loading file: {errorMessage}", isError: true);
+                        Debug.WriteLine($"Error loading file: {errorMessage}");
+                    }
+                    else
+                    {
+                        _detailRenderer.ClearAndSetMessage("File open cancelled or no databases loaded.");
+                    }
                 }
             }
-            // On success, the DatabasesChanged event handles UI updates.
+            catch (Exception ex)
+            {
+                // Log the exception
+                Debug.WriteLine($"Error in OpenMenuItem_Click: {ex.Message}");
+                Debug.WriteLine(ex.StackTrace);
+                // Inform the user
+                _detailRenderer?.ClearAndSetMessage($"An unexpected error occurred while opening the file: {ex.Message}", isError: true);
+            }
         }
 
         /// <summary>
@@ -150,7 +184,6 @@ namespace ACME
         private void CloseAllMenuItem_Click(object sender, RoutedEventArgs e)
         {
             _databaseManager.CloseAllDatabases();
-            // UI updates are handled by the DatabasesChanged event handler
         }
 
         /// <summary>
@@ -165,12 +198,12 @@ namespace ACME
             }
             else
             {
-                // Concatenate names for status bar, include access type
                 LoadedFileStatusText.Text = "Loaded: " + string.Join(" | ", 
                     databases.Select(db => $"{db.FileName} ({db.Type}, {(db.CanWrite ? "Read-Write" : "Read-Only")})"));
             }
         }
 
+#if DEBUG
         /// <summary>
         /// Helper to log database state for debugging.
         /// </summary>
@@ -189,6 +222,7 @@ namespace ACME
             }
              Debug.WriteLine($"  Current DB Set in Manager: {(_databaseManager.CurrentDatabase != null)}");
         }
+#endif
 
         /// <summary>
         /// Handles the window closing event to ensure database resources are released.
@@ -198,24 +232,6 @@ namespace ACME
             _databaseManager?.CloseAllDatabases(); // Dispose all open databases
             Debug.WriteLine("MainWindow_Closed: Called CloseAllDatabases.");
         }
-
-        // --------------------------------------------------
-        // REMOVED METHODS (Moved to Manager/Renderer classes)
-        // --------------------------------------------------
-        // - AddDatabaseToTree
-        // - PopulatePortalTreeView (multiple overloads)
-        // - PopulateCellTreeView (multiple overloads)
-        // - TryAddNode
-        // - TryAddNodeForCollection
-        // - IsPredefinedProperty
-        // - ProcessTreeViewSelectionAsync
-        // - ClearDetailPane
-        // - DisplaySingleObject<T>
-        // - DisplaySingleObjectHeader
-        // - ItemListView_SelectionChanged
-        // - DisplayObjectProperties
-        // - LogLoadedDatabases (replaced with LogLoadedDatabasesForDebug)
-        // --------------------------------------------------
 
         /// <summary>
         /// Event handler for the spell name filter TextBox.
@@ -234,11 +250,9 @@ namespace ACME
         /// </summary>
         private void TreeViewDataLoader_RelevantDataViewChanged(object? sender, RelevantDataViewChangedEventArgs e)
         {
-            // Ensure UI updates happen on the UI thread
             DispatcherQueue.TryEnqueue(() =>
             {
                 SpellFilterPanel.Visibility = e.IsSpellViewRelevant ? Visibility.Visible : Visibility.Collapsed;
-                // If hiding, clear the filter text
                 if (!e.IsSpellViewRelevant)
                 {
                     SpellNameFilterTextBox.Text = string.Empty;

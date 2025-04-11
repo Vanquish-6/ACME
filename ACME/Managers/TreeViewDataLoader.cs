@@ -42,10 +42,24 @@ namespace ACME.Managers
     /// </summary>
     public class TreeViewDataLoader
     {
+        // Constants for magic strings
+        private const string SubtypeSpells = "Spells";
+        private const string SubtypeSpellSets = "SpellSets";
+        private const string SubtypeChatPoses = "ChatPoses";
+        private const string SubtypeChatEmotes = "ChatEmotes";
+        private const string SubtypeStartingAreas = "StartingAreas";
+        private const string SubtypeHeritageGroups = "HeritageGroups";
+
+        private const string TagEnvCells = "EnvCells";
+        private const string TagLandBlockInfos = "LandBlockInfos";
+        private const string TagLandBlocks = "LandBlocks";
+
         private readonly DatabaseManager _databaseManager;
         private readonly ListView _itemListView;
         private readonly DetailRenderer _detailRenderer;
-        private SpellTable? _currentSpellTable; // Store the currently loaded spell table for filtering
+        private readonly ListViewSelectionHandler _listViewSelectionHandler;
+        private readonly SpellFilterManager _spellFilterManager;
+        private readonly SpellLoader _spellLoader;
         
         /// <summary>
         /// Maintains a reference to the last successful node data for selection handling
@@ -67,19 +81,27 @@ namespace ACME.Managers
         /// </summary>
         public event EventHandler<RelevantDataViewChangedEventArgs>? RelevantDataViewChanged;
         
-        public TreeViewDataLoader(DatabaseManager databaseManager, ListView itemListView, DetailRenderer detailRenderer)
+        public TreeViewDataLoader(
+            DatabaseManager databaseManager,
+            ListView itemListView,
+            DetailRenderer detailRenderer,
+            ListViewSelectionHandler listViewSelectionHandler,
+            SpellFilterManager spellFilterManager,
+            SpellLoader spellLoader)
         {
             _databaseManager = databaseManager ?? throw new ArgumentNullException(nameof(databaseManager));
             _itemListView = itemListView ?? throw new ArgumentNullException(nameof(itemListView));
             _detailRenderer = detailRenderer ?? throw new ArgumentNullException(nameof(detailRenderer));
             
-            // Wire up generic ListView selection changed event
+            _listViewSelectionHandler = listViewSelectionHandler ?? throw new ArgumentNullException(nameof(listViewSelectionHandler));
+            _spellFilterManager = spellFilterManager ?? throw new ArgumentNullException(nameof(spellFilterManager));
+            _spellLoader = spellLoader ?? throw new ArgumentNullException(nameof(spellLoader));
+            
             _itemListView.SelectionChanged += ItemListView_SelectionChanged;
         }
         
         /// <summary>
         /// Process the selected TreeView item and load appropriate data
-        /// (Restored and adapted from MainWindow.xaml.cs)
         /// </summary>
         /// <param name="selectedNode">The newly selected TreeViewNode</param>
         /// <returns>Task representing the async operation</returns>
@@ -122,7 +144,7 @@ namespace ACME.Managers
 
             try
             {
-                string? dbId = GetDatabaseIdFromIdentifier(nodeData.Identifier);
+                string? dbId = DatParsingHelpers.GetDatabaseIdFromIdentifier(nodeData.Identifier);
                 if (string.IsNullOrEmpty(dbId))
                 {
                     Debug.WriteLine("Database ID is empty or could not be extracted.");
@@ -179,53 +201,76 @@ namespace ACME.Managers
             uint fileId = nodeId.FileId;
             string subtype = nodeId.Subtype;
             object? itemsSource = null;
+            bool isSpellViewRelevant = false; // Initialize relevance flag
             Debug.WriteLine($"Processing node with FileId: 0x{fileId:X8}, Subtype: {subtype}");
 
-            // Clear the current spell table reference when loading new data
-            _currentSpellTable = null; 
-            // Signal that the spell view is initially not relevant
-            RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(false));
+            // Determine if we are loading spells first, to clear the filter manager if not.
+            bool isLoadingSpellsOrSets = fileId == DatFileIds.SpellTableId; // Check if it's the SpellTable ID
+
+            if (!isLoadingSpellsOrSets)
+            {
+                 _spellFilterManager.SetSpellTable(null); // Clear manager if not loading spells/sets
+                 isSpellViewRelevant = false;
+                 RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(isSpellViewRelevant));
+            }
+            // Else: Relevance for spell view will be determined by SpellLoader below.
 
             if (targetDb is PortalDatabase portalDb)
             {
-                if (fileId == DatFileIds.SpellTableId)
-                {
-                    Debug.WriteLine($"Attempting to load SpellTable with fileId: 0x{fileId:X8}");
-                    _detailRenderer.ClearAndSetMessage($"Attempting to load SpellTable...", isError: false);
-                    if (portalDb.TryReadFile<SpellTable>(fileId, out var spellTable) && spellTable != null)
-                    {
-                        Debug.WriteLine($"Successfully read SpellTable: {(spellTable != null ? "non-null" : "null")}");
-                        // Ensure Microsoft.UI.Colors is used
-                        _detailRenderer.ClearAndSetMessage($"Successfully read SpellTable file", isError: false);
-                        if (string.IsNullOrEmpty(subtype) || subtype == "Spells")
-                        {
-                            // --- START FILTERING LOGIC (Now uses helper method) ---
-                             _currentSpellTable = spellTable; // <-- Store the reference
-                            _detailRenderer.ClearAndAddDefaultTitle();
-                            // Show total before filtering message
-                             _detailRenderer.AddInfoMessage($"Total Spells (Unfiltered): {spellTable.Spells?.Count ?? 0}");
+                 _detailRenderer.ClearAndSetMessage($"Attempting to load data for {displayName}...", isError: false); // Generic loading message
 
-                             // Call the helper method with initial empty filters
-                            itemsSource = GetFilteredSpellItemsSource(spellTable, ""); 
-                            // Signal that the spell view IS now relevant
-                            RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(true));
-                            // --- END FILTERING LOGIC (Now uses helper method) ---
-                        }
-                        else if (subtype == "SpellSets")
+                 // --- Use SpellLoader for SpellTableId --- (Handles Spells and SpellSets)
+                if (isLoadingSpellsOrSets)
+                {
+                    if (string.IsNullOrEmpty(subtype) || subtype == SubtypeSpells)
+                    {
+                        // Use LoadSpellsAndFilter which returns the result object
+                        var filterResult = _spellLoader.LoadSpellsAndFilter(portalDb);
+                        itemsSource = filterResult.FilteredItemsSource;
+                        isSpellViewRelevant = filterResult.HasData;
+
+                        _detailRenderer.ClearAndAddDefaultTitle(); // Clear previous messages
+                        if (filterResult.HasData)
                         {
-                            _detailRenderer.ClearAndAddDefaultTitle();
-                             _detailRenderer.AddInfoMessage($"Total Spell Sets: {spellTable.SpellsSets?.Count ?? 0}");
-                             if (spellTable.SpellsSets != null && spellTable.SpellsSets.Count > 0)
-                             {
-                                 itemsSource = spellTable.SpellsSets.Select(s => new { Id = s.Key, Count = s.Value?.SpellSetTiers?.Count ?? 0, DisplayText = $"{s.Key}: Set ({s.Value?.SpellSetTiers?.Count ?? 0} tiers)", Value = s.Value }).OrderBy(s => s.Id).ToList();
-                                 _detailRenderer.ClearAndSetMessage("Select a spell set from the list.", isError: false);
-                             }
-                             else { _detailRenderer.AddInfoMessage("No spell sets found."); }
+                             _detailRenderer.AddInfoMessage($"Total Spells (Unfiltered): {_spellFilterManager.GetTotalSpellCount()}");
+                             _detailRenderer.AddInfoMessage(filterResult.StatusMessage); // Display status from filter result
                         }
-                        else { _detailRenderer.ClearAndSetMessage($"Unknown SpellTable subtype: {subtype}", isError: true); }
+                        else
+                        {
+                            _detailRenderer.ClearAndSetMessage(filterResult.StatusMessage, isError: true); // Show error/status if no data
+                        }
                     }
-                    else { _detailRenderer.ClearAndSetMessage("Failed to load SpellTable data.", isError: true); }
+                    else if (subtype == SubtypeSpellSets)
+                    {
+                        itemsSource = _spellLoader.LoadSpellSets(portalDb);
+                        isSpellViewRelevant = false; // Spell sets don't use the spell filter view
+
+                        _detailRenderer.ClearAndAddDefaultTitle();
+                        if (itemsSource != null && itemsSource is ICollection setCollection && setCollection.Count > 0)
+                        {
+                             _detailRenderer.AddInfoMessage($"Total Spell Sets: {setCollection.Count}");
+                             _detailRenderer.AddInfoMessage("Select a spell set from the list.");
+                        }
+                        else if (itemsSource == null)
+                        {
+                             // Error loading spell sets (SpellLoader failed to read table)
+                            _detailRenderer.ClearAndSetMessage("Failed to load SpellTable data for SpellSets.", isError: true);
+                        }
+                        else // Empty list returned
+                        {
+                             _detailRenderer.AddInfoMessage("No spell sets found in the table.");
+                        }
+                    }
+                    else // Unknown subtype for SpellTableId
+                    {
+                        _detailRenderer.ClearAndSetMessage($"Unknown SpellTable subtype: {subtype}", isError: true);
+                        itemsSource = null;
+                        isSpellViewRelevant = false;
+                    }
+                    // Raise the event after handling all SpellTable subtypes
+                    RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(isSpellViewRelevant));
                 }
+                // --- Keep other file ID handling directly in this class --- (Ensure this ELSE is correct)
                 else if (fileId == DatFileIds.SkillTableId)
                 {
                     if (portalDb.TryReadFile<SkillTable>(fileId, out var skillTable) && skillTable != null)
@@ -256,7 +301,7 @@ namespace ACME.Managers
                      }
                       else { _detailRenderer.ClearAndSetMessage("Failed to load SpellComponentTable data.", isError: true); }
                  }
-                // --- NEW: Handle ChatPoseTable based on Subtype --- 
+                // --- NEW: Handle ChatPoseTable based on Subtype ---
                 else if (fileId == DatFileIds.ChatPoseTableId)
                 {
                     if (string.IsNullOrEmpty(subtype))
@@ -269,18 +314,20 @@ namespace ACME.Managers
                     }
                     else if (portalDb.TryReadFile<ChatPoseTable>(fileId, out var chatPoseTable) && chatPoseTable != null)
                     {
-                        if (subtype == "ChatPoses")
+                        if (subtype == SubtypeChatPoses)
                         {
                             _detailRenderer.ClearAndAddDefaultTitle();
-                            _detailRenderer.AddInfoMessage($"Listing Chat Poses ({chatPoseTable.ChatPoseHash?.Count ?? 0} entries). Select one to view details.");
-                            // Transform dictionary into list for ListView
-                            itemsSource = chatPoseTable.ChatPoseHash?
-                                .Select(kvp => new { DisplayText = kvp.Key, Value = kvp.Value }) // Use Key for display
-                                .OrderBy(item => item.DisplayText)
-                                .ToList<object>(); 
+                            if (chatPoseTable.ChatPoseHash != null && chatPoseTable.ChatPoseHash.Count > 0)
+                            {
+                                itemsSource = chatPoseTable.ChatPoseHash
+                                    .Select(kvp => new { DisplayText = kvp.Key, Value = kvp }) // Pass the whole KeyValuePair as the Value
+                                    .OrderBy(p => p.DisplayText)
+                                    .ToList();
+                                _detailRenderer.ClearAndSetMessage($"Listing Chat Poses ({chatPoseTable.ChatPoseHash.Count} found). Select one from the list.", isError: false);
+                            }
                             displayDirectly = false; // List the dictionary entries first
                         }
-                        else if (subtype == "ChatEmotes")
+                        else if (subtype == SubtypeChatEmotes)
                         {
                             _detailRenderer.ClearAndAddDefaultTitle();
                              _detailRenderer.AddInfoMessage($"Listing Chat Emotes ({chatPoseTable.ChatEmoteHash?.Count ?? 0} entries). Select one to view details.");
@@ -288,7 +335,7 @@ namespace ACME.Managers
                              itemsSource = chatPoseTable.ChatEmoteHash?
                                 .Select(kvp => new { DisplayText = kvp.Key, Value = kvp.Value }) // Use Key for display
                                 .OrderBy(item => item.DisplayText)
-                                .ToList<object>(); 
+                                .ToList<object>();
                             displayDirectly = false; // List the dictionary entries first
                         }
                         else
@@ -319,53 +366,13 @@ namespace ACME.Managers
                      _detailRenderer.ClearAndAddDefaultTitle();
                      _detailRenderer.AddInfoMessage("Select an XP category from the list.");
                  }
-                 else if (fileId == DatFileIds.VitalTableId)
-                 {
-                     if (portalDb.TryReadFile<VitalTable>(fileId, out var vitalTable) && vitalTable != null)
-                     {
-                         _detailRenderer.ClearAndAddDefaultTitle();
-                         _detailRenderer.AddInfoMessage("Select a vital (Health, Stamina, or Mana) to view details.");
-                         itemsSource = new List<object>
-                         {
-                             new { DisplayText = "Health", Value = vitalTable.Health },
-                             new { DisplayText = "Stamina", Value = vitalTable.Stamina },
-                             new { DisplayText = "Mana", Value = vitalTable.Mana }
-                         };
-                         displayDirectly = false; // Display the list first
-                     }
-                     else
-                     {
-                         _detailRenderer.ClearAndSetMessage("Failed to load VitalTable data.", isError: true);
-                         itemsSource = null;
-                         displayDirectly = false;
-                     }
-                 }
-                 else if (fileId == DatFileIds.BadDataTableId)
-                 {
-                     if (portalDb.TryReadFile<BadDataTable>(fileId, out var badDataTable) && badDataTable?.BadIds != null)
-                     {
-                         displayDirectly = false;
-                         itemsSource = badDataTable.BadIds
-                             .Select(kvp => new { DisplayText = $"Key: 0x{kvp.Key:X8}, Value: 0x{kvp.Value:X8}", Value = kvp })
-                             .OrderBy(item => item.Value.Key) // Order by key for consistency
-                             .ToList();
-                         _detailRenderer.ClearAndAddDefaultTitle();
-                         _detailRenderer.AddInfoMessage($"Found {badDataTable.BadIds.Count} bad ID entries. Select one from the list.");
-                     }
-                     else
-                     {
-                         _detailRenderer.ClearAndSetMessage("Failed to load BadDataTable data or it contains no entries.", isError: true);
-                         itemsSource = null;
-                         displayDirectly = false;
-                     }
-                 }
                 // --- CharGen with Subtypes ---
                  else if (fileId == DatFileIds.CharGenId)
                  {
                      if (portalDb.TryReadFile<CharGen>(fileId, out var charGen) && charGen != null)
                      {
                          _detailRenderer.ClearAndSetMessage("Successfully read CharGen file", isError: false);
-                         if (subtype == "StartingAreas")
+                         if (subtype == SubtypeStartingAreas)
                          {
                              _detailRenderer.ClearAndAddDefaultTitle();
                              if (charGen.StartingAreas != null && charGen.StartingAreas.Count > 0)
@@ -376,7 +383,7 @@ namespace ACME.Managers
                              else { _detailRenderer.ClearAndSetMessage("No starting areas found.", isError: false); }
                              displayDirectly = false;
                          }
-                         else if (subtype == "HeritageGroups")
+                         else if (subtype == SubtypeHeritageGroups)
                          {
                              _detailRenderer.ClearAndAddDefaultTitle();
                              if (charGen.HeritageGroups != null && charGen.HeritageGroups.Count > 0)
@@ -398,7 +405,7 @@ namespace ACME.Managers
                      else { _detailRenderer.ClearAndSetMessage("Failed to load CharGen data.", isError: true); }
                  }
                  // --- File Range Tables (Restored LanguageTableId to IsRangeTableId) ---
-                 else if (IsRangeTableId(fileId))
+                 else if (DatParsingHelpers.IsRangeTableId(fileId))
                  {
                      displayDirectly = false; // Ensure range tables are listed first
                      try
@@ -428,102 +435,20 @@ namespace ACME.Managers
         /// </summary>
         public void ApplySpellFilter(string nameFilter /* TODO: Add other filter parameters */)
         {
-            if (_currentSpellTable != null)
-            {
-                Debug.WriteLine($"ApplySpellFilter called with Name: '{nameFilter}'");
-                // Use the helper method to get the filtered source
-                object? filteredSource = GetFilteredSpellItemsSource(_currentSpellTable, nameFilter);
-                // Update the ListView's ItemsSource directly
-                _itemListView.ItemsSource = filteredSource;
-                // Ensure relevance is still true when applying filter successfully
-                 RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(true));
-            }
-            else
-            {
-                Debug.WriteLine("ApplySpellFilter called, but no SpellTable is currently loaded/selected.");
-                // Signal that the spell view is not relevant if filter is called inappropriately
-                 RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(false));
-                // Optionally clear the list or show a message if the spell node isn't active
-                // _itemListView.ItemsSource = null;
-                // _detailRenderer.AddInfoMessage("Select the 'Spells' node to enable filtering.");
-            }
-        }
-        
-        /// <summary>
-        /// Applies filters to a SpellTable and returns the ItemsSource for the ListView.
-        /// Also updates the DetailRenderer messages.
-        /// </summary>
-        private object? GetFilteredSpellItemsSource(SpellTable spellTable, string nameFilter /* TODO: Add other filters as parameters */)
-        {
-            object? itemsSource = null;
-            MagicSchool? schoolFilter = null; // Placeholder for future filter
-            uint? componentFilter = null; // Placeholder for future filter
+            Debug.WriteLine($"ApplySpellFilter called with Name: '{nameFilter}'");
 
-            if (spellTable.Spells != null && spellTable.Spells.Count > 0)
-            {
-                var filteredSpells = spellTable.Spells.Values.AsEnumerable(); // Start query
+            // Use the spell filter manager
+            var filterResult = _spellFilterManager.ApplyFilters(nameFilter); // <-- Use SpellFilterManager
 
-                if (!string.IsNullOrWhiteSpace(nameFilter))
-                {
-                    filteredSpells = filteredSpells.Where(s => s.Name != null && s.Name.Contains(nameFilter, StringComparison.OrdinalIgnoreCase));
-                }
-                if (schoolFilter.HasValue) // Keep placeholder logic
-                {
-                    filteredSpells = filteredSpells.Where(s => s.School == schoolFilter.Value);
-                }
-                if (componentFilter.HasValue) // Keep placeholder logic
-                {
-                    // Ensure Components list is not null before checking
-                    filteredSpells = filteredSpells.Where(s => s.Components != null && s.Components.Contains(componentFilter.Value));
-                }
+            // Update the ListView's ItemsSource directly
+            _itemListView.ItemsSource = filterResult.FilteredItemsSource;
 
-                // Convert filtered results to list for the UI
-                // Need the original dictionary to get the Key (ID) back efficiently
-                var filteredList = filteredSpells
-                    .Select(s => 
-                    {
-                        // Find the key corresponding to this spell value
-                        // This isn't super efficient, but necessary if we need the ID display
-                        // An alternative is to pass the spell object directly and let the renderer handle ID lookup if needed
-                        var kvp = spellTable.Spells.FirstOrDefault(entry => entry.Value == s); 
-                        return new { Id = kvp.Key, Name = s.Name ?? "?", DisplayText = $"{kvp.Key}: {s.Name ?? "?"}", Value = s };
-                    })
-                    .OrderBy(s => s.Id)
-                    .ToList();
-                
-                itemsSource = filteredList;
+            // Clear previous messages and set the new status message
+            _detailRenderer.ClearAndSetMessage(filterResult.StatusMessage, isError: false); // Use ClearAndSetMessage
 
-                // Update message based on filtering result
-                bool isFiltered = !string.IsNullOrWhiteSpace(nameFilter) || schoolFilter.HasValue || componentFilter.HasValue;
-                if (isFiltered) {
-                    _detailRenderer.ClearAndSetMessage($"Showing {filteredList.Count} matching spells. Select one.", isError: false);
-                } else {
-                    _detailRenderer.ClearAndSetMessage($"Listing all {filteredList.Count} spells. Select one.", isError: false);
-                }
-            }
-            else 
-            { 
-                _detailRenderer.ClearAndSetMessage("No spells found.", isError: false); 
-            }
-            return itemsSource;
-        }
-
-        /// <summary>
-        /// Checks if a file ID is likely the start of a range-based table.
-        /// </summary>
-        private bool IsRangeTableId(uint fileId)
-        {
-            // Add known range start IDs here
-            return fileId == DatFileIds.ClothingTableId || fileId == DatFileIds.GfxObjTableId ||
-                   fileId == DatFileIds.MotionTableId || fileId == DatFileIds.PaletteTableId ||
-                   fileId == DatFileIds.ParticleEmitterTableId || fileId == DatFileIds.AnimationHookTableId ||
-                   fileId == DatFileIds.ChatEmoteTableId || fileId == DatFileIds.DungeonTableId ||
-                   fileId == DatFileIds.GeneratorTableId || fileId == DatFileIds.MaterialTableId ||
-                   fileId == DatFileIds.QualityFilterTableId || fileId == DatFileIds.RenderMaterialTableId ||
-                   fileId == DatFileIds.SoundTableId || fileId == DatFileIds.SurfaceTableId ||
-                   fileId == DatFileIds.TextureTableId || fileId == DatFileIds.UILayoutTableId ||
-                   fileId == DatFileIds.AnimationTableId || fileId == DatFileIds.LanguageTableId ||
-                   fileId == DatFileIds.StringStateTableId;
+            // Ensure relevance is still true when applying filter (if the manager has data)
+            // We infer relevance from whether the filter manager produced data.
+            RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(filterResult.HasData));
         }
 
         /// <summary>
@@ -551,7 +476,7 @@ namespace ACME.Managers
                  bool handled = true;
                  switch (baseTag)
                  {
-                    case "EnvCells": 
+                    case TagEnvCells: 
                         // --- DISABLED: Loading all EnvCells directly is too slow and causes issues ---
                         _detailRenderer.ClearAndAddDefaultTitle();
                         _detailRenderer.AddInfoMessage("Loading all EnvCells is disabled. Select a LandBlock first.", Colors.Orange);
@@ -559,12 +484,12 @@ namespace ACME.Managers
                         displayDirectly = false;
                         handled = true; // Mark as handled to prevent GetPropertyDynamically fallback
                         break;
-                    case "LandBlockInfos": 
+                    case TagLandBlockInfos: 
                         // Keep lazy loading for these for now, assuming they are faster
                         itemsSource = cellDb.LandBlockInfos?.Select(x => new { DisplayText = $"LandBlockInfo 0x{x.Id:X8}", Id=x.Id, Value = x }); 
                         displayDirectly = false;
                         break;
-                    case "LandBlocks": 
+                    case TagLandBlocks: 
                         // Keep lazy loading for these for now, assuming they are faster
                         itemsSource = cellDb.LandBlocks?.Select(x => new { DisplayText = $"LandBlock 0x{x.Id:X8}", Id=x.Id, Value = x }); 
                         displayDirectly = false;
@@ -614,6 +539,10 @@ namespace ACME.Managers
                  else { _detailRenderer.ClearAndSetMessage($"Could not load data for '{baseTag}' from Portal DB.", isError: true); }
             }
             else { _detailRenderer.ClearAndSetMessage($"Loading not implemented for '{baseTag}' in DB type {targetDb.GetType().Name}.", isError: true); }
+
+            // Ensure spell view is marked as irrelevant when loading non-spell string tags
+            _spellFilterManager.SetSpellTable(null);
+            RelevantDataViewChanged?.Invoke(this, new RelevantDataViewChangedEventArgs(false));
 
             return itemsSource;
         }
@@ -725,406 +654,18 @@ namespace ACME.Managers
         }
 
         /// <summary>
-        /// Extracts the Database ID string from various identifier types.
-        /// </summary>
-        private string? GetDatabaseIdFromIdentifier(object? identifier)
-        {
-            return identifier switch
-            {
-                NodeIdentifier nodeId => nodeId.DatabaseId,
-                string strId when strId.Contains('_') => strId.Split(new[] { '_' }, 2).LastOrDefault(),
-                string strId => strId,
-                _ => null
-            };
-        }
-
-        /// <summary>
         /// Handles selection changes in the ItemListView to display details.
+        /// Now delegates the core logic to ListViewSelectionHandler.
         /// </summary>
         private void ItemListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {            
-            Debug.WriteLine("ItemListView_SelectionChanged triggered.");
+            Debug.WriteLine("ItemListView_SelectionChanged triggered (delegating to handler).");
 
-            // --- Use Event Args to get selected item --- 
+            // Get the actual selected item from the event args
             object? actualSelectedItem = e.AddedItems.FirstOrDefault();
-            
-            if (actualSelectedItem == null)
-            {
-                Debug.WriteLine("ItemListView_SelectionChanged: AddedItems is empty or null.");
-                // If selection is cleared (e.g., clicking empty space), AddedItems is empty.
-                // You might want to clear the detail view here if desired.
-                // _detailRenderer.ClearAndAddDefaultTitle(); 
-                return;
-            }
-            // --- End Use Event Args --- 
 
-            Debug.WriteLine($"ItemListView_SelectionChanged: Processing item type: {actualSelectedItem.GetType().Name}");
-            
-            // --- Get Database context FIRST --- 
-            TreeNodeData? lastNode = GetLastSuccessfulNodeData(); // Get context from tree selection
-            DatDatabase? relevantDb = null;
-            string? dbId = GetDatabaseIdFromIdentifier(lastNode?.Identifier);
-            if (!string.IsNullOrEmpty(dbId))
-            {
-                var dbInfo = _databaseManager.FindDatabase(dbId);
-                relevantDb = dbInfo?.Database;
-                if (relevantDb == null) { Debug.WriteLine($"ItemListView_SelectionChanged: Could not find database with ID {dbId} based on last tree node."); }
-            }
-            else { Debug.WriteLine("ItemListView_SelectionChanged: Could not determine DB ID from last tree node."); }
-            // --- End Get Database --- 
-
-            // --- Prepare Context for Detail Renderer ---
-            Dictionary<string, object>? context = null;
-
-            // --- Extract the actual data item ('Value') from the anonymous type --- 
-            object? itemToProcess = actualSelectedItem;
-            uint? selectedItemId = null; // Store ID if applicable
-            
-            var valuePropertyInfo = actualSelectedItem.GetType().GetProperty("Value");
-            var idPropertyInfo = actualSelectedItem.GetType().GetProperty("Id"); // Get Id property too
-            
-            if (idPropertyInfo != null)
-            {
-                selectedItemId = idPropertyInfo.GetValue(actualSelectedItem) as uint?;
-                
-                // If we have an ID, store it in the context later
-                if (selectedItemId.HasValue)
-                {
-                    if (context == null)
-                    {
-                        context = new Dictionary<string, object>();
-                    }
-                    context["SelectedItemId"] = selectedItemId.Value;
-                    Debug.WriteLine($"ItemListView_SelectionChanged: Adding SelectedItemId={selectedItemId.Value} to context");
-                }
-            }
-            
-            if (valuePropertyInfo != null)
-            {               
-                var value = valuePropertyInfo.GetValue(actualSelectedItem);
-                if (value != null) // If Value is NOT null, use it (e.g., for LandBlocks/Infos)
-                {
-                     itemToProcess = value;
-                     Debug.WriteLine($"ItemListView_SelectionChanged: Extracted non-null 'Value' property. Processing type: {itemToProcess?.GetType().Name}");
-                }
-                else if (selectedItemId.HasValue && _lastSuccessfulNodeData?.DisplayName == "EnvCells")
-                {                     
-                    // Value is NULL, ID has value, and we selected from EnvCells list - Load the EnvCell now
-                    Debug.WriteLine($"ItemListView_SelectionChanged: EnvCell placeholder selected (Id: 0x{selectedItemId.Value:X8}). Loading full object...");
-                    if (relevantDb != null && relevantDb is CellDatabase cellDbForLoad) // Ensure we have the CellDatabase
-                    {                       
-                        if (cellDbForLoad.TryReadFile<EnvCell>(selectedItemId.Value, out var loadedEnvCell))
-                        {
-                            itemToProcess = loadedEnvCell;
-                            Debug.WriteLine("ItemListView_SelectionChanged: Successfully loaded full EnvCell.");
-                        }
-                        else
-                        {
-                             Debug.WriteLine("ItemListView_SelectionChanged: Failed to load full EnvCell.");
-                             _detailRenderer.ClearAndSetMessage($"Error: Could not load EnvCell 0x{selectedItemId.Value:X8}", true);
-                             return; // Stop processing if load fails
-                        }
-                    }
-                    else
-                    {
-                        Debug.WriteLine("ItemListView_SelectionChanged: Cannot load EnvCell - CellDatabase not available.");
-                         _detailRenderer.ClearAndSetMessage("Error: Cell DB not found for EnvCell loading.", true);
-                        return; // Stop processing
-                    }
-                }
-                 else { Debug.WriteLine($"ItemListView_SelectionChanged: 'Value' property was null, but not loading EnvCell on demand."); }
-            }
-            else { Debug.WriteLine("ItemListView_SelectionChanged: Could not find 'Value' property, processing selected item directly."); }
-
-            // If extraction failed, stop
-            if (itemToProcess == null)
-            {
-                Debug.WriteLine("ItemListView_SelectionChanged: itemToProcess is null after attempting extraction.");
-                return; 
-            }
-            // --- End Extraction --- 
-
-            // --- SPECIAL: Handle LandBlock Selection to Load its EnvCells ---
-            if (itemToProcess is LandBlock selectedLandBlock && relevantDb is CellDatabase cellDbForEnvCells)
-            {
-                uint landBlockId = selectedLandBlock.Id;
-                uint envCellStartId = landBlockId | 0x00000001; // Assumed range start
-                uint envCellEndId = landBlockId | 0x0000FFFF;   // Assumed range end
-
-                Debug.WriteLine($"LandBlock 0x{landBlockId:X8} selected. Querying EnvCells in range 0x{envCellStartId:X8} - 0x{envCellEndId:X8}");
-                _detailRenderer.AddInfoMessage($"Loading EnvCells for LandBlock 0x{landBlockId:X8}...", Colors.Orange);
-
-                List<object>? envCellItemsSource = null;
-                int envCellCount = 0;
-
-                try
-                {
-                    if (cellDbForEnvCells.Tree != null)
-                    {
-                        var envCellFiles = cellDbForEnvCells.Tree.GetFilesInRange(envCellStartId, envCellEndId);
-                        if (envCellFiles != null)
-                        {
-                            envCellItemsSource = envCellFiles.Select(f => new { DisplayText = $"EnvCell 0x{f.Id:X8}", Id = f.Id, Value = (EnvCell?)null }).ToList<object>();
-                            envCellCount = envCellItemsSource.Count; // Get count from the generated list
-                            Debug.WriteLine($"Found {envCellCount} EnvCells for LandBlock 0x{landBlockId:X8}.");
-                        }
-                        else
-                        {
-                            Debug.WriteLine($"BTree GetFilesInRange returned null for EnvCells for LandBlock 0x{landBlockId:X8}.");
-                        }
-                    }
-                    else
-                    {
-                        Debug.WriteLine("CellDatabase.Tree is null. Cannot query EnvCells.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error querying EnvCells for LandBlock 0x{landBlockId:X8}: {ex.Message}");
-                    // Use AddInfoMessage with Red color for error
-                    _detailRenderer.AddInfoMessage($"Error loading EnvCells: {ex.Message}", Colors.Red); 
-                }
-
-                // Update ListView and add message regardless of LandBlock details display
-                _itemListView.ItemsSource = envCellItemsSource; // Set to null if no cells found or error
-                if (envCellCount > 0)
-                {
-                     _detailRenderer.AddInfoMessage($"Found {envCellCount} EnvCells. Select one from the list.", Colors.Green);
-                }
-                else
-                {
-                     _detailRenderer.AddInfoMessage("No EnvCells found for this LandBlock.", Colors.Orange);
-                }
-                 // NOTE: We will fall through to display the LandBlock details below
-            }
-            // --- END SPECIAL LandBlock Handling ---
-
-            // Try to get the correct PortalDatabase based on the last tree selection
-            PortalDatabase? portalDbForContext = null;
-            if (!string.IsNullOrEmpty(dbId))
-            {
-                var dbInfo = _databaseManager.FindDatabase(dbId);
-                portalDbForContext = dbInfo?.Database as PortalDatabase;
-            }
-
-            // If we found the PortalDB, create the context and attempt to load all lookups
-            if (portalDbForContext != null)
-            {
-                Debug.WriteLine("ItemListView_SelectionChanged: Found PortalDB, preparing context lookups.");
-                // Initialize context if not already done
-                if (context == null)
-                {
-                    context = new Dictionary<string, object>();
-                }
-                
-                // Add DatabaseManager to context for spell editing
-                context["DatabaseManager"] = _databaseManager;
-                
-                // Add DetailRenderer to context for updates
-                context["DetailRenderer"] = _detailRenderer;
-                
-                // Add RefreshView action to context for UI updates after saving
-                context["RefreshView"] = new Action(RefreshCurrentView);
-                
-                // Try to get the main window
-                Window? mainWindow = WindowHelper.MainWindow;
-                if (mainWindow != null)
-                {
-                    context["Window"] = mainWindow;
-                }
-
-                // Attempt to load all potential lookup sources
-                portalDbForContext.TryReadFile<CharGen>(DatFileIds.CharGenId, out var charGenData);
-                portalDbForContext.TryReadFile<SkillTable>(DatFileIds.SkillTableId, out var skillTableData);
-                portalDbForContext.TryReadFile<SpellTable>(DatFileIds.SpellTableId, out var spellTableData);
-                portalDbForContext.TryReadFile<SpellComponentTable>(DatFileIds.SpellComponentsTableId, out var spellComponentTableData);
-
-                // Add ObjectType hint if the item is HeritageGroupCG (still needed for specific renderer selection)
-                if (itemToProcess is HeritageGroupCG)
-                {
-                    context["ObjectType"] = "HeritageGroupCG";
-                    Debug.WriteLine("ItemListView_SelectionChanged: Added ObjectType hint for HeritageGroupCG.");
-                }
-                // Add hints for other specific types if needed here...
-
-                // Create and add SkillLookup
-                if (skillTableData?.Skills != null)
-                {
-                    var skillLookup = skillTableData.Skills
-                        .Where(kvp => kvp.Value?.Name != null)
-                        .ToDictionary(kvp => (uint)kvp.Key, kvp => kvp.Value.Name ?? "?"); 
-                    context["SkillLookup"] = skillLookup;
-                    Debug.WriteLine($"ItemListView_SelectionChanged: Added SkillLookup ({skillLookup.Count} entries).");
-                }
-                else { Debug.WriteLine("ItemListView_SelectionChanged: SkillTable not loaded for SkillLookup."); }
-
-                // Create and add StartAreaLookup
-                if (charGenData?.StartingAreas != null)
-                {
-                    // Revert back to using the list index as the key for the lookup,
-                    // as StartingArea doesn't have an explicit ID, and HeritageGroup references it by index.
-                    var startAreaLookup = charGenData.StartingAreas
-                        .Select((area, index) => new { Id = index, Name = area?.Name ?? "?" }) // Use index as ID
-                        .Where(a => a.Name != "?") // Filter out any null areas or areas without names
-                        .ToDictionary(a => a.Id, a => a.Name);
-                    context["StartAreaLookup"] = startAreaLookup;
-                    Debug.WriteLine($"ItemListView_SelectionChanged: Added StartAreaLookup ({startAreaLookup.Count} entries) using LIST INDEX as key.");
-                }
-                else { Debug.WriteLine("ItemListView_SelectionChanged: CharGen not loaded for StartAreaLookup."); }
-
-                // Create and add SpellLookup
-                if (spellTableData?.Spells != null)
-                {
-                    var spellLookup = spellTableData.Spells
-                        .Where(kvp => kvp.Value?.Name != null)
-                        .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name ?? "?");
-                    context["SpellLookup"] = spellLookup;
-                     Debug.WriteLine($"ItemListView_SelectionChanged: Added SpellLookup ({spellLookup.Count} entries).");
-                }
-                else { Debug.WriteLine("ItemListView_SelectionChanged: SpellTable not loaded for SpellLookup."); }
-
-                // Create and add ComponentLookup
-                if (spellComponentTableData?.Components != null)
-                {
-                    var componentLookup = spellComponentTableData.Components
-                         .Where(kvp => kvp.Value?.Name != null)
-                         .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Name ?? "?");
-                     context["ComponentLookup"] = componentLookup;
-                     Debug.WriteLine($"ItemListView_SelectionChanged: Added ComponentLookup ({componentLookup.Count} entries).");
-                }
-                else { Debug.WriteLine("ItemListView_SelectionChanged: SpellComponentTable not loaded for ComponentLookup."); }
-            }
-            else
-            {
-                 Debug.WriteLine("ItemListView_SelectionChanged: Could not find relevant PortalDatabase. No context lookups added.");
-            }
-
-            // --- End Context Preparation ---
-            
-            // --- Add SelectedItemId to context if applicable ---
-            // Ensure context is initialized before trying to add to it
-            if (context == null)
-            {
-                context = new Dictionary<string, object>();
-            }
-            
-            if (actualSelectedItem != null)
-            {
-                var itemType = actualSelectedItem.GetType();
-                var idProp = itemType.GetProperty("Id"); // Get the 'Id' property of the anonymous type
-                if (idProp != null)
-                {
-                    var idValue = idProp.GetValue(actualSelectedItem);
-                    if (idValue is EquipmentSet equipmentSetId) // Check if the ID is an EquipmentSet
-                    {
-                        context["SelectedItemId"] = equipmentSetId;
-                        Debug.WriteLine($"ItemListView_SelectionChanged: Added SelectedItemId = {equipmentSetId} to context for SpellSet.");
-                    }
-                     else if (idValue is uint generalId) // Handle uint IDs (Spells, Components etc.)
-                     {
-                         context["SelectedItemId"] = generalId;
-                         Debug.WriteLine($"ItemListView_SelectionChanged: Added SelectedItemId = {generalId} (uint) to context.");
-                     }
-                     // Add checks for other specific ID types if needed
-                }
-                 else
-                 {                    
-                     // It's possible the selected item doesn't have an 'Id' property (e.g., direct object display)
-                     Debug.WriteLine("ItemListView_SelectionChanged: Could not find 'Id' property on selected item's anonymous type, or selected item is not the expected type.");
-                 }
-            }
-            // --- End adding SelectedItemId ---
-
-            // --- Special Handling for LanguageString Files from Range List (Keep existing logic) ---
-            if (lastNode?.Identifier is NodeIdentifier nodeId && 
-                nodeId.FileId == DatFileIds.LanguageTableId && 
-                actualSelectedItem?.GetType().Name.Contains("AnonymousType") == true)
-            {
-                // Use itemToProcess (which should be the DatBTreeFile) 
-                if (itemToProcess is DatBTreeFile fileEntry) 
-                {
-                    // Restore inline LanguageString loading logic
-                    if (relevantDb != null && relevantDb is PortalDatabase portalDbForLang)
-                    {
-                        Debug.WriteLine($"Attempting to load selected LanguageString: 0x{fileEntry.Id:X8}");
-                        _detailRenderer.ClearAndSetMessage($"Loading string 0x{fileEntry.Id:X8}...", isError: false);
-                        if (portalDbForLang.TryReadFile<LanguageString>(fileEntry.Id, out var langString) && langString != null)
-                        {
-                            // Display the LanguageString object directly
-                            _detailRenderer.DisplayItemDetails(langString);
-                        }
-                        else
-                        {
-                            _detailRenderer.ClearAndSetMessage($"Failed to read LanguageString file 0x{fileEntry.Id:X8}.", isError: true);
-                        }
-                    }
-                    return; // Handled language string file selection
-                }
-            }
-            // --- END Language String Handling ---
-
-            // --- Get Item to Display ---
-            // Start with the extracted item 
-            object? itemToDisplay = itemToProcess; 
-
-            // Check if the parent selection was the ExperienceTable
-            if (_lastSuccessfulNodeData?.Identifier is NodeIdentifier expTableNodeId && expTableNodeId.FileId == DatFileIds.ExperienceTableId)
-            {
-                // Try to extract the 'Data' property from the anonymous type (actualSelectedItem)
-                var dataProperty = actualSelectedItem?.GetType().GetProperty("Data");
-                if (dataProperty != null)
-                {
-                    var dataValue = dataProperty.GetValue(actualSelectedItem);
-                    if (dataValue != null) // Use the extracted array if found
-                    {
-                         System.Diagnostics.Debug.WriteLine($"ItemListView_SelectionChanged: ExperienceTable context detected. Extracted data array of type {dataValue.GetType().Name} to display.");
-                         itemToDisplay = dataValue;
-
-                         // --- Transform array into a list of indexed values --- 
-                         if (itemToDisplay is uint[] uintArray)
-                         {
-                             itemToDisplay = uintArray.Select((val, idx) => new { Index = idx, Value = val }).ToList();
-                             System.Diagnostics.Debug.WriteLine($"ItemListView_SelectionChanged: Transformed uint[] to List<{{Index, Value}}>.");
-                         }
-                         else if (itemToDisplay is ulong[] ulongArray)
-                         {
-                             itemToDisplay = ulongArray.Select((val, idx) => new { Index = idx, Value = val }).ToList();
-                             System.Diagnostics.Debug.WriteLine($"ItemListView_SelectionChanged: Transformed ulong[] to List<{{Index, Value}}>.");
-                         }
-                         // --- End Transformation ---
-                    }
-                    else
-                    {
-                         System.Diagnostics.Debug.WriteLine("ItemListView_SelectionChanged: ExperienceTable context detected, but 'Data' property value was null.");
-                    }
-                }
-                 else
-                {
-                      System.Diagnostics.Debug.WriteLine("ItemListView_SelectionChanged: ExperienceTable context detected, but failed to find 'Data' property on the selected item.");
-                 }
-            }
-            // --- NEW: Check if the parent selection was the BadDataTable ---
-            else if (_lastSuccessfulNodeData?.Identifier is NodeIdentifier badDataNodeId && badDataNodeId.FileId == DatFileIds.BadDataTableId)
-            {
-                // Try to extract the 'Value' property (the KeyValuePair) from the anonymous type (actualSelectedItem)
-                var valueProperty = actualSelectedItem?.GetType().GetProperty("Value");
-                if (valueProperty != null)
-                {
-                    var dataValue = valueProperty.GetValue(actualSelectedItem);
-                    if (dataValue != null) // Use the extracted KeyValuePair if found
-                    {
-                        System.Diagnostics.Debug.WriteLine($"ItemListView_SelectionChanged: BadDataTable context detected. Extracted KeyValuePair to display.");
-                        itemToDisplay = dataValue; // Display the KeyValuePair directly
-                    }
-                    else { System.Diagnostics.Debug.WriteLine("ItemListView_SelectionChanged: BadDataTable context detected, but 'Value' property value was null."); }
-                }
-                else { System.Diagnostics.Debug.WriteLine("ItemListView_SelectionChanged: BadDataTable context detected, but failed to find 'Value' property on the selected item."); }
-            }
-            // --- End BadDataTable Check ---
-            // --- End Get Item to Display ---
-
-            // Call DisplayItemDetails with the item extracted from 'Value' and the context dictionary
-            _detailRenderer.DisplayItemDetails(itemToDisplay, context); 
+            // Call the handler method, passing the selected item, the current tree context, and the refresh action
+            _listViewSelectionHandler.HandleSelectionChanged(actualSelectedItem, _lastSuccessfulNodeData, RefreshCurrentView);
         }
 
         /// <summary>

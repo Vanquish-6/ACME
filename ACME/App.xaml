@@ -12,6 +12,11 @@
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
             <!-- Other app resources here -->
+            <Thickness x:Key="RendererMainPanelMargin">12,0,0,20</Thickness>
+            <Thickness x:Key="RendererExpanderMargin">0,5,0,5</Thickness>
+            <Thickness x:Key="RendererNestedPanelMargin">20,0,0,0</Thickness>
+            <Thickness x:Key="RendererHookTextMargin">0,3,0,3</Thickness>
+
             <converters:KeyValueConverter x:Key="KeyValueConverter"/>
         </ResourceDictionary>
     </Application.Resources>

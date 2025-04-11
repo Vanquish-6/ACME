@@ -199,6 +199,11 @@ namespace ACME.Renderers
             var type = obj.GetType();
             string typeName = type.Name;
 
+            if (obj is KeyValuePair<string, string> stringPair)
+            {
+                return $"Chat Pose: {stringPair.Key}";
+            }
+
             if (obj is KeyValuePair<object, object> kvp)
             {
                  return $"Entry: {kvp.Key}";

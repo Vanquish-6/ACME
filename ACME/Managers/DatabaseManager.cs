@@ -54,112 +54,104 @@ namespace ACME.Managers
         public async Task<(bool Success, string ErrorMessage)> TryLoadDatabaseAsync(StorageFile file, IntPtr hwnd)
         {
             string errorMessage = string.Empty;
-            
+            DatDatabase? newDb = null;
+            DatabaseType dbType = DatabaseType.None;
+
             try
             {
-                // First, detect database type
-                bool isCell = file.Name.ToLower().Contains("cell");
-                
-                DatDatabase? newDb = null;
-                DatabaseType dbType = DatabaseType.None;
-                
-                try
+                // First, detect preferred database type based on filename convention
+                bool isLikelyCell = file.Name.ToLower().Contains("cell");
+                DatabaseType primaryAttemptType = isLikelyCell ? DatabaseType.Cell : DatabaseType.Portal;
+                DatabaseType secondaryAttemptType = isLikelyCell ? DatabaseType.Portal : DatabaseType.Cell;
+
+                // Attempt 1: Try opening with the preferred type
+                newDb = OpenDatabase(file.Path, primaryAttemptType);
+                if (newDb != null)
                 {
-                    // Try opening based on the detected type first
-                    if (isCell)
+                    dbType = primaryAttemptType;
+                    Debug.WriteLine($"Successfully loaded {file.Name} as {dbType} on first attempt.");
+                }
+                else
+                {
+                    // Attempt 2: Try opening with the alternate type
+                    Debug.WriteLine($"First attempt to load {file.Name} as {primaryAttemptType} failed. Trying {secondaryAttemptType}.");
+                    newDb = OpenDatabase(file.Path, secondaryAttemptType);
+
+                    if (newDb != null)
                     {
-                        Action<DatDatabaseOptions> optionsAction = (opt) => {
-                            opt.FilePath = file.Path;
-                            opt.AccessType = DatAccessType.ReadWrite; // Always use ReadWrite
-                        };
-                        var dbOptions = new DatDatabaseOptions();
-                        optionsAction(dbOptions); // Populate options object
-                        var streamAllocator = new StreamBlockAllocator(dbOptions); // Explicitly create StreamBlockAllocator
-                        newDb = new CellDatabase(optionsAction, streamAllocator); // Pass action AND allocator
-                        dbType = DatabaseType.Cell;
-                        Debug.WriteLine($"Successfully loaded {file.Name} as CellDatabase using StreamBlockAllocator.");
+                        dbType = secondaryAttemptType;
+                        Debug.WriteLine($"Successfully loaded {file.Name} as {dbType} on second attempt.");
                     }
                     else
                     {
-                        Action<DatDatabaseOptions> optionsAction = (opt) => {
-                            opt.FilePath = file.Path;
-                            opt.AccessType = DatAccessType.ReadWrite; // Always use ReadWrite
-                        };
-                        var dbOptions = new DatDatabaseOptions();
-                        optionsAction(dbOptions); // Populate options object
-                        var streamAllocator = new StreamBlockAllocator(dbOptions); // Explicitly create StreamBlockAllocator
-                        newDb = new PortalDatabase(optionsAction, streamAllocator); // Pass action AND allocator
-                        dbType = DatabaseType.Portal;
-                        Debug.WriteLine($"Successfully loaded {file.Name} as PortalDatabase using StreamBlockAllocator.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Failed to load {file.Name} with StreamBlockAllocator (attempt 1): {ex.Message}");
-
-                    // Try the opposite type (also forcing StreamBlockAllocator)
-                    try
-                    {
-                        if (isCell) // Original detection was cell, failed, now try Portal
-                        {
-                            Action<DatDatabaseOptions> optionsAction = (opt) => {
-                                opt.FilePath = file.Path;
-                                opt.AccessType = DatAccessType.ReadWrite; // Always use ReadWrite
-                            };
-                            var dbOptions = new DatDatabaseOptions();
-                            optionsAction(dbOptions); // Populate options object
-                            var streamAllocator = new StreamBlockAllocator(dbOptions); // Explicitly create StreamBlockAllocator
-                            newDb = new PortalDatabase(optionsAction, streamAllocator); // Pass action AND allocator
-                            dbType = DatabaseType.Portal;
-                            Debug.WriteLine($"Successfully loaded {file.Name} as PortalDatabase using StreamBlockAllocator on second attempt.");
-                        }
-                        else // Original detection was portal, failed, now try Cell
-                        {
-                            Action<DatDatabaseOptions> optionsAction = (opt) => {
-                                opt.FilePath = file.Path;
-                                opt.AccessType = DatAccessType.ReadWrite; // Always use ReadWrite
-                            };
-                            var dbOptions = new DatDatabaseOptions();
-                            optionsAction(dbOptions); // Populate options object
-                            var streamAllocator = new StreamBlockAllocator(dbOptions); // Explicitly create StreamBlockAllocator
-                            newDb = new CellDatabase(optionsAction, streamAllocator); // Pass action AND allocator
-                            dbType = DatabaseType.Cell;
-                            Debug.WriteLine($"Successfully loaded {file.Name} as CellDatabase using StreamBlockAllocator on second attempt.");
-                        }
-                    }
-                    catch (Exception exSecond)
-                    {
-                        errorMessage = $"Failed to load {file.Name} with StreamBlockAllocator (attempt 2): {exSecond.Message}";
+                        // Both attempts failed
+                        errorMessage = $"Failed to load {file.Name} as either {primaryAttemptType} or {secondaryAttemptType} using StreamBlockAllocator.";
                         Debug.WriteLine(errorMessage);
-                        // Make sure to clean up any partially created allocator if the second attempt fails
-                        (newDb?.BlockAllocator as IDisposable)?.Dispose();
-                        return (false, errorMessage);
+                        return (false, errorMessage); // newDb is null, allocator disposal handled within OpenDatabase
                     }
                 }
-                
-                if (newDb != null)
+
+                // If we reach here, newDb is not null and dbType is set
+                var dbInfo = new DatabaseInfo(newDb, dbType, file.Name, file.Path);
+                _loadedDatabases.Add(dbInfo);
+
+                // Set as current
+                CurrentDatabase = newDb;
+                CurrentDatabaseType = dbType;
+
+                // Notify listeners
+                DatabasesChanged?.Invoke(this, new DatabasesChangedEventArgs(_loadedDatabases.AsReadOnly(), dbInfo));
+
+                return (true, string.Empty);
+            }
+            catch (Exception ex) // Catch unexpected errors during the loading process
+            {
+                errorMessage = $"Unexpected error loading database {file.Name}: {ex.Message}";
+                Debug.WriteLine(errorMessage);
+                // Ensure disposal if a database was successfully opened but an error occurred before it was fully managed
+                (newDb as IDisposable)?.Dispose(); 
+                return (false, errorMessage);
+            }
+        }
+        
+        /// <summary>
+        /// Helper method to open a database of a specific type using StreamBlockAllocator.
+        /// </summary>
+        /// <param name="filePath">Path to the database file.</param>
+        /// <param name="dbTypeToTry">The DatabaseType (Cell or Portal) to attempt opening.</param>
+        /// <returns>A DatDatabase instance if successful, otherwise null.</returns>
+        private static DatDatabase? OpenDatabase(string filePath, DatabaseType dbTypeToTry)
+        {
+            Action<DatDatabaseOptions> optionsAction = opt => {
+                opt.FilePath = filePath;
+                opt.AccessType = DatAccessType.ReadWrite; // Always use ReadWrite
+            };
+            var dbOptions = new DatDatabaseOptions();
+            optionsAction(dbOptions); 
+            StreamBlockAllocator? streamAllocator = null; 
+
+            try
+            {
+                // Explicitly create StreamBlockAllocator
+                streamAllocator = new StreamBlockAllocator(dbOptions); 
+
+                DatDatabase newDb = dbTypeToTry switch
                 {
-                    // Add to our collection
-                    var dbInfo = new DatabaseInfo(newDb, dbType, file.Name, file.Path);
-                    _loadedDatabases.Add(dbInfo);
-                    
-                    // Set as current
-                    CurrentDatabase = newDb;
-                    CurrentDatabaseType = dbType;
-                    
-                    // Notify listeners
-                    DatabasesChanged?.Invoke(this, new DatabasesChangedEventArgs(_loadedDatabases.AsReadOnly(), dbInfo));
-                    
-                    return (true, string.Empty);
-                }
+                    DatabaseType.Cell => new CellDatabase(optionsAction, streamAllocator),
+                    DatabaseType.Portal => new PortalDatabase(optionsAction, streamAllocator),
+                    _ => throw new ArgumentOutOfRangeException(nameof(dbTypeToTry), $"Unsupported database type: {dbTypeToTry}")
+                };
+                
+                // Success, ownership of streamAllocator is passed to newDb
+                return newDb; 
             }
             catch (Exception ex)
             {
-                errorMessage = $"Error loading database: {ex.Message}";
-                Debug.WriteLine(errorMessage);
+                Debug.WriteLine($"Failed to open {Path.GetFileName(filePath)} as {dbTypeToTry} using StreamBlockAllocator: {ex.Message}");
+                // If allocator was created but the database constructor failed, dispose the allocator.
+                streamAllocator?.Dispose(); 
+                return null; // Signal failure
             }
-            
-            return (false, errorMessage);
         }
         
         /// <summary>

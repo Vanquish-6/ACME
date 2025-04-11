@@ -144,35 +144,41 @@ namespace ACME.Managers
             portalRoot.Children.Add(chatPoseTableNode);
             // --- END NEW SECTION ---
             
-            // Add all the standard nodes (CharGen and ChatPoseTable removed from here)
-            TryAddNode(portalRoot, "Animation", DatFileIds.AnimationTableId, dbId);
-            TryAddNode(portalRoot, "AnimationHooks", DatFileIds.AnimationHookTableId, dbId);
-            TryAddNode(portalRoot, "ChatEmotes", DatFileIds.ChatEmoteTableId, dbId);
+            // Add nodes based on corrected DatFileIds constants
+            TryAddNode(portalRoot, "Weenie Defaults", DatFileIds.WeenieDefaultsId, dbId);
+            TryAddNode(portalRoot, "Combat Table", DatFileIds.CombatTableId, dbId);
+            TryAddNode(portalRoot, "Skill Table", DatFileIds.SkillTableId, dbId);
+            TryAddNode(portalRoot, "Spell Components", DatFileIds.SpellComponentsTableId, dbId);
+            TryAddNode(portalRoot, "Experience Table", DatFileIds.ExperienceTableId, dbId);
+            TryAddNode(portalRoot, "Taboo Table", DatFileIds.TabooTableId, dbId);
+            TryAddNode(portalRoot, "Game Event Table", DatFileIds.GameEventTableId, dbId);
+
+            TryAddNode(portalRoot, "GfxObj", DatFileIds.GfxObjId, dbId);
+            TryAddNode(portalRoot, "Setups", DatFileIds.SetupId, dbId);
+            TryAddNode(portalRoot, "Animations", DatFileIds.AnimationId, dbId);
+            TryAddNode(portalRoot, "Animation Hook Ops", DatFileIds.AnimationHookOpId, dbId);
+            TryAddNode(portalRoot, "Surface Textures", DatFileIds.SurfaceTextureId, dbId);
+            TryAddNode(portalRoot, "Render Surfaces", DatFileIds.RenderSurfaceId, dbId);
+            TryAddNode(portalRoot, "Surfaces", DatFileIds.SurfaceId, dbId);
+            TryAddNode(portalRoot, "Motion Tables", DatFileIds.MotionTableId, dbId);
+            TryAddNode(portalRoot, "Sound Tables", DatFileIds.SoundTableId, dbId);
+            TryAddNode(portalRoot, "Sound Resources", DatFileIds.SoundResourceId, dbId);
+            TryAddNode(portalRoot, "Palettes", DatFileIds.PaletteId, dbId);
             TryAddNode(portalRoot, "Clothing", DatFileIds.ClothingTableId, dbId);
-            TryAddNode(portalRoot, "CombatTable", DatFileIds.CombatTableId, dbId);
-            TryAddNode(portalRoot, "Dungeons", DatFileIds.DungeonTableId, dbId);
-            TryAddNode(portalRoot, "ExperienceTable", DatFileIds.ExperienceTableId, dbId);
-            TryAddNode(portalRoot, "FileMap", DatFileIds.FileMapId, dbId);
-            TryAddNode(portalRoot, "GameEventTable", DatFileIds.GameEventTableId, dbId);
-            TryAddNode(portalRoot, "Generators", DatFileIds.GeneratorTableId, dbId);
-            TryAddNode(portalRoot, "GfxObjs", DatFileIds.GfxObjTableId, dbId);
-            TryAddNode(portalRoot, "LanguageStrings", DatFileIds.LanguageTableId, dbId);
-            TryAddNode(portalRoot, "Materials", DatFileIds.MaterialTableId, dbId);
-            TryAddNode(portalRoot, "MotionTables", DatFileIds.MotionTableId, dbId);
-            TryAddNode(portalRoot, "Palette", DatFileIds.PaletteTableId, dbId);
-            TryAddNode(portalRoot, "ParticleEmitters", DatFileIds.ParticleEmitterTableId, dbId);
-            TryAddNode(portalRoot, "QualityFilters", DatFileIds.QualityFilterTableId, dbId);
-            TryAddNode(portalRoot, "RenderMaterials", DatFileIds.RenderMaterialTableId, dbId);
-            TryAddNode(portalRoot, "SkillTable", DatFileIds.SkillTableId, dbId);
-            TryAddNode(portalRoot, "Sounds", DatFileIds.SoundTableId, dbId);
-            TryAddNode(portalRoot, "SpellComponentsTable", DatFileIds.SpellComponentsTableId, dbId);
-            TryAddNode(portalRoot, "StringStateTable", DatFileIds.StringStateTableId, dbId);
-            TryAddNode(portalRoot, "Surfaces", DatFileIds.SurfaceTableId, dbId);
-            TryAddNode(portalRoot, "Textures", DatFileIds.TextureTableId, dbId);
-            TryAddNode(portalRoot, "UILayouts", DatFileIds.UILayoutTableId, dbId);
-            TryAddNode(portalRoot, "VitalTable", DatFileIds.VitalTableId, dbId);
-            TryAddNode(portalRoot, "WeenieDefaults", DatFileIds.WeenieDefaultsId, dbId);
-            TryAddNode(portalRoot, "BadDataTable", DatFileIds.BadDataTableId, dbId);
+            TryAddNode(portalRoot, "Regions", DatFileIds.RegionId, dbId);
+            TryAddNode(portalRoot, "Keymaps", DatFileIds.KeymapId, dbId);
+            TryAddNode(portalRoot, "Render Textures", DatFileIds.RenderTextureId, dbId);
+            TryAddNode(portalRoot, "Quality Filters", DatFileIds.QualityFilterId, dbId);
+            TryAddNode(portalRoot, "Render Materials", DatFileIds.RenderMaterialId, dbId);
+            TryAddNode(portalRoot, "Fonts", DatFileIds.FontId, dbId);
+            TryAddNode(portalRoot, "Materials", DatFileIds.MaterialId, dbId);
+            TryAddNode(portalRoot, "Physics Script Tables", DatFileIds.PhysicsScriptTableId, dbId);
+            TryAddNode(portalRoot, "Particle Emitters", DatFileIds.ParticleEmitterTableId, dbId);
+            TryAddNode(portalRoot, "Generator Profiles", DatFileIds.GeneratorProfileId, dbId);
+            TryAddNode(portalRoot, "Language Strings", DatFileIds.LanguageStringDataId, dbId);
+
+            // Note: Local Dat types (UILayout, StringTable, FontLocal, StringState) are not added here
+            // as this function populates for PortalDatabase.
             
             // Now dynamically find and add all public IEnumerable properties that might be collections
             foreach (var prop in typeof(PortalDatabase).GetProperties())
