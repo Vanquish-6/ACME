@@ -30,7 +30,7 @@ namespace ACME.Constants
         public const uint RenderSurfaceId = 0x06000000; // RenderSurface range start (Added)
         public const uint SurfaceId = 0x08000000; // Surface range start (Renamed from SurfaceTableId)
         public const uint MotionTableId = 0x09000000; // MotionTable range start
-        public const uint SoundTableId = 0x0A000000; // SoundTable range start
+        public const uint SoundTableId = 0x20000000; // SoundTable range start
         public const uint SoundResourceId = 0x0D000000; // SoundResource range start (Added)
         public const uint PaletteId = 0x04000000; // Palette range start (Corrected ID, was 0x0F000000)
         public const uint PaletteSetId = 0x0F000000; // PaletteSet range start (Added)

@@ -8,6 +8,7 @@ using DatReaderWriter;
 using DatReaderWriter.DBObjs;
 using DatReaderWriter.Enums;
 using DatReaderWriter.Types;
+using DatReaderWriter.Lib;
 using DatReaderWriter.Lib.IO.DatBTree;
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
@@ -436,7 +437,11 @@ namespace ACME.Managers
                      try
                      {
                          var items = targetDb.Tree.GetFilesInRange(fileId, fileId | 0x00FFFFFF);
-                         itemsSource = items?.Select(f => new { Id = f.Id, DisplayText = $"File 0x{f.Id:X8}", Value = f }).ToList();
+                         itemsSource = items?.Select(f => new { 
+                             Id = f.Id, 
+                             DisplayText = $"File 0x{f.Id:X8}", // Display text for the list view
+                             Value = f // Keep the original object for the detail view 
+                         }).ToList();
                          _detailRenderer.ClearAndAddDefaultTitle();
                          // Cast to IList to safely get the Count for any list type
                          int count = (itemsSource as System.Collections.IList)?.Count ?? 0;
@@ -555,6 +560,19 @@ namespace ACME.Managers
             else if (targetDb is PortalDatabase portalDbForProps)
             {
                 itemsSource = GetPropertyDynamically(portalDbForProps, baseTag);
+
+                 // --- BEGIN ADDITION: Handle Waves specifically ---
+                 if (baseTag.Equals("Waves", StringComparison.OrdinalIgnoreCase) && itemsSource is DBObjCollection<Wave> waves)
+                 {
+                     itemsSource = waves.Select(w => new {
+                         Id = w.Id,
+                         DisplayText = $"Wave 0x{w.Id:X8}",
+                         Value = w
+                     }).OrderBy(w => w.Id).ToList();
+                     displayDirectly = false; // Ensure it's treated as a list
+                 }
+                 // --- END ADDITION ---
+
                  if (itemsSource != null)
                  {
                       _detailRenderer.ClearAndAddDefaultTitle();

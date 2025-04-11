@@ -69,6 +69,7 @@ namespace ACME.Renderers
             // --- END NEW RENDERERS ---
             _renderers.Add(typeof(Palette), new PaletteRenderer());
             _renderers.Add(typeof(PaletteSet), new PaletteSetRenderer());
+            _renderers.Add(typeof(DatReaderWriter.DBObjs.Wave), new SoundRenderer());
             
             // Add other context-specific renderers here
         }

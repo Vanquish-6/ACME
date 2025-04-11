@@ -224,6 +224,8 @@ namespace ACME.Managers
                             if (portalDbForRangeLoad.TryReadFile<MotionTable>(fileIdToLoad, out var mot)) { loadedDbObj = mot; loadSuccess = true; } break;
                         case DatFileIds.RenderSurfaceId:
                             if (portalDbForRangeLoad.TryReadFile<RenderSurface>(fileIdToLoad, out var rs)) { loadedDbObj = rs; loadSuccess = true; } break;
+                        case DatFileIds.SoundTableId:
+                            if (portalDbForRangeLoad.TryReadFile<Wave>(fileIdToLoad, out var wave)) { loadedDbObj = wave; loadSuccess = true; } break;
                         default:
                             Debug.WriteLine($"ListViewSelectionHandler: No specific loader implemented for range ID 0x{originalRangeId:X8}. Cannot load concrete object.");
                             break;

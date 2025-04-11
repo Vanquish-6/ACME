@@ -301,6 +301,13 @@ namespace ACME.Renderers
                  return $"Entry: {kvp.Key}";
             }
 
+            // --- NEW: Handle Wave (Sound) type specifically ---
+            if (obj is DatReaderWriter.DBObjs.Wave waveObj)
+            {
+                return $"Sound: ID {waveObj.Id:X8}";
+            }
+            // --- END NEW ---
+
             if (type.Name.Contains("AnonymousType"))
             {
                  PropertyInfo? displayProp = type.GetProperty("DisplayText");

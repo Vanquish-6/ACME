@@ -121,7 +121,7 @@
                     <!-- Simple and direct item template for maximum compatibility -->
                     <ListView.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding DisplayText, FallbackValue={Binding}}" FontWeight="SemiBold" Margin="0,2" />
+                            <TextBlock Text="{Binding DisplayText}" FontWeight="SemiBold" Margin="0,2" />
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
