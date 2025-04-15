@@ -246,6 +246,13 @@ namespace ACME.Renderers
             }
             // --- END Collection with Lookup ---
 
+            // --- Specific Type/Name Handling: GfxObj.DrawingBSP ---
+            if (valueType.Name == "DrawingBSP" || memberName == "DrawingBSP") // Check type name or member name
+            {
+                panel.Children.Add(new TextBlock { Text = "{ BSP Tree (Display Limited) }", FontStyle = FontStyle.Italic, Foreground = new SolidColorBrush(Colors.Gray) });
+                return; // Stop rendering this branch further
+            }
+
             // --- General IEnumerable Handling (BEFORE Complex Object) ---
             if (value is IEnumerable generalEnumerable && !(value is string) && !(value is IDictionary)) 
             {

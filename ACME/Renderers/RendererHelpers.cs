@@ -148,6 +148,52 @@ namespace ACME.Renderers
         }
 
         /// <summary>
+        /// Adds a simple list of uints to the panel.
+        /// </summary>
+        public static void RenderSimpleUintList(Panel panel, string label, List<uint> list)
+        {
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.Margin = new Thickness(0, 3, 0, 3);
+
+            grid.Children.Add(new TextBlock
+            {
+                Text = label + ":",
+                FontWeight = FontWeights.SemiBold,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Top,
+                Margin = new Thickness(0, 0, 15, 0)
+            });
+
+            var valuesPanel = new StackPanel();
+            Grid.SetColumn(valuesPanel, 1);
+            grid.Children.Add(valuesPanel);
+
+            if (list == null || list.Count == 0)
+            {
+                valuesPanel.Children.Add(new TextBlock { Text = "(empty)", FontStyle = FontStyle.Italic });
+            }
+            else
+            {
+                int count = 0;
+                valuesPanel.Children.Add(new TextBlock { Text = $"({list.Count} item(s))", FontStyle = FontStyle.Italic, Foreground = new SolidColorBrush(Colors.Gray), Margin = new Thickness(0,0,0,4) });
+                foreach (uint item in list)
+                {
+                    valuesPanel.Children.Add(new TextBlock { Text = $"[{count}]: 0x{item:X8} ({item})" });
+                    count++;
+                    if (count >= MaxItemsToShow) // Use constant from this class
+                    {
+                        valuesPanel.Children.Add(new TextBlock { Text = $"... ({list.Count - count} more items not shown)", FontStyle = FontStyle.Italic, Margin = new Thickness(0, 4, 0, 0) });
+                        break;
+                    }
+                }
+            }
+
+            panel.Children.Add(grid);
+        }
+
+        /// <summary>
         /// Adds a separator line to the panel.
         /// </summary>
         public static void AddSeparator(Panel panel)
@@ -460,7 +506,7 @@ namespace ACME.Renderers
                     if (prop.GetIndexParameters().Length > 0) continue;
 
                     object? value = prop.GetValue(obj);
-                    RenderMember(targetPanel, prop.Name, prop.PropertyType, value, context, currentDepth);
+                    RenderMember(targetPanel, prop.Name, prop.PropertyType, value, context, currentDepth, maxDepth);
                 }
                 catch (Exception ex)
                 {
@@ -474,7 +520,7 @@ namespace ACME.Renderers
                  try
                  {
                     object? value = field.GetValue(obj);
-                    RenderMember(targetPanel, field.Name, field.FieldType, value, context, currentDepth);
+                    RenderMember(targetPanel, field.Name, field.FieldType, value, context, currentDepth, maxDepth);
                  }
                  catch (Exception ex)
                  {

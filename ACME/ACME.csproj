@@ -43,7 +43,8 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250401001" />
     <PackageReference Include="CommunityToolkit.WinUI.UI.Controls.Layout" Version="7.1.2" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" /> <!-- Manually added version -->
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
+    <PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.5" /> <!-- Manually added version -->
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\DatReaderWriter\DatReaderWriter\DatReaderWriter.csproj" />

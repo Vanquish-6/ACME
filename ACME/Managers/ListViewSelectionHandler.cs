@@ -67,6 +67,9 @@ namespace ACME.Managers
             else { Debug.WriteLine("ListViewSelectionHandler: Could not determine DB ID from tree context node."); }
 
             Dictionary<string, object>? context = null;
+            
+            // Declare nodeIdentifier once here
+            NodeIdentifier? nodeIdentifier = lastNode?.Identifier as NodeIdentifier; 
 
             object? itemToProcess = actualSelectedItem;
             uint? selectedItemId = null;
@@ -80,45 +83,70 @@ namespace ACME.Managers
                  if (idValue is uint uintId)
                  {
                      selectedItemId = uintId;
-                     Debug.WriteLine($"ListViewSelectionHandler: Potential selectedItemId = {selectedItemId.Value}");
+                     Debug.WriteLine($"ListViewSelectionHandler: Potential selectedItemId = 0x{selectedItemId.Value:X8}");
                  }
             }
             
+            bool valueWasProcessed = false;
             if (valuePropertyInfo != null)
             {               
                 var value = valuePropertyInfo.GetValue(actualSelectedItem);
                 if (value != null)
                 {
-                     itemToProcess = value;
-                     Debug.WriteLine($"ListViewSelectionHandler: Extracted non-null 'Value' property. Processing type: {itemToProcess?.GetType().Name}");
+                    itemToProcess = value;
+                    valueWasProcessed = true;
+                    Debug.WriteLine($"ListViewSelectionHandler: Extracted non-null 'Value' property. Processing type: {itemToProcess?.GetType().Name}");
                 }
-                 else if (selectedItemId.HasValue && lastNode?.DisplayName == "EnvCells")
-                {                     
-                    Debug.WriteLine($"ListViewSelectionHandler: EnvCell placeholder selected (Id: 0x{selectedItemId.Value:X8}). Loading full object...");
-                    if (relevantDb != null && relevantDb is CellDatabase cellDbForLoad)
-                    {                       
-                        if (cellDbForLoad.TryReadFile<EnvCell>(selectedItemId.Value, out var loadedEnvCell))
-                        {
-                            itemToProcess = loadedEnvCell;
-                            Debug.WriteLine("ListViewSelectionHandler: Successfully loaded full EnvCell.");
-                        }
-                        else
-                        {
-                             Debug.WriteLine("ListViewSelectionHandler: Failed to load full EnvCell.");
-                             _detailRenderer.ClearAndSetMessage($"Error: Could not load EnvCell 0x{selectedItemId.Value:X8}", true);
-                             return;
-                        }
+            }
+
+            if (!valueWasProcessed && selectedItemId.HasValue && nodeIdentifier != null) 
+            {
+                uint itemId = selectedItemId.Value;
+                uint contextFileId = nodeIdentifier.FileId;
+                DatDatabase? db = relevantDb;
+
+                if (db == null) {
+                    Debug.WriteLine($"ListViewSelectionHandler: Cannot lazy-load item 0x{itemId:X8} because relevant DB is null.");
+                    _detailRenderer.ClearAndSetMessage($"Error: Cannot load details for 0x{itemId:X8}, database context lost.", true);
+                    return;
+                } 
+                else if (contextFileId == DatFileIds.PaletteId && db is PortalDatabase portalDbForPaletteLoad) 
+                {
+                    Debug.WriteLine($"ListViewSelectionHandler: Palette placeholder selected (Id: 0x{itemId:X8}). Loading full object...");
+                    if (portalDbForPaletteLoad.TryReadFile<Palette>(itemId, out var loadedPalette))
+                    {
+                        itemToProcess = loadedPalette;
+                        Debug.WriteLine("ListViewSelectionHandler: Successfully loaded full Palette.");
                     }
                     else
                     {
-                        Debug.WriteLine("ListViewSelectionHandler: Cannot load EnvCell - CellDatabase not available.");
-                         _detailRenderer.ClearAndSetMessage("Error: Cell DB not found for EnvCell loading.", true);
+                        Debug.WriteLine($"ListViewSelectionHandler: Failed to load full Palette 0x{itemId:X8}.");
+                        _detailRenderer.ClearAndSetMessage($"Error: Could not load Palette 0x{itemId:X8}", true);
                         return;
                     }
                 }
-                 else { Debug.WriteLine($"ListViewSelectionHandler: 'Value' property was null, but not loading EnvCell on demand (or not EnvCell context)."); }
+                else if (lastNode?.DisplayName == "EnvCells" && db is CellDatabase cellDbForLoad) 
+                {                     
+                    Debug.WriteLine($"ListViewSelectionHandler: EnvCell placeholder selected (Id: 0x{itemId:X8}). Loading full object...");
+                    if (cellDbForLoad.TryReadFile<EnvCell>(itemId, out var loadedEnvCell))
+                    {
+                        itemToProcess = loadedEnvCell;
+                        Debug.WriteLine("ListViewSelectionHandler: Successfully loaded full EnvCell.");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"ListViewSelectionHandler: Failed to load full EnvCell 0x{itemId:X8}.");
+                        _detailRenderer.ClearAndSetMessage($"Error: Could not load EnvCell 0x{itemId:X8}", true);
+                        return;
+                    }
+                } 
+                else 
+                {
+                    Debug.WriteLine($"ListViewSelectionHandler: Item 0x{itemId:X8} with missing Value from context {contextFileId:X8} doesn't match known lazy-load types. Processing placeholder.");
+                }
+            } else if (!valueWasProcessed) {
+                Debug.WriteLine($"ListViewSelectionHandler: Could not find 'Value' property or necessary context/ID for lazy loading. Processing selected item directly: {itemToProcess?.GetType().Name}");
             }
-            else { Debug.WriteLine("ListViewSelectionHandler: Could not find 'Value' property, processing selected item directly."); }
 
             if (itemToProcess == null)
             {
@@ -184,7 +212,7 @@ namespace ACME.Managers
             object? itemToDisplay = itemToProcess; 
 
             if (itemToDisplay is DatBTreeFile rangeFileEntry && 
-                lastNode?.Identifier is NodeIdentifier nodeIdentifier &&
+                nodeIdentifier != null &&
                 DatParsingHelpers.IsRangeTableId(nodeIdentifier.FileId) &&
                 relevantDb is PortalDatabase portalDbForRangeLoad)
             {
@@ -214,6 +242,10 @@ namespace ACME.Managers
                      {
                         case DatFileIds.AnimationId:
                             if (portalDbForRangeLoad.TryReadFile<Animation>(fileIdToLoad, out var anim)) { loadedDbObj = anim; loadSuccess = true; } break;
+                        case DatFileIds.GfxObjId:
+                            if (portalDbForRangeLoad.TryReadFile<GfxObj>(fileIdToLoad, out var gfx)) { loadedDbObj = gfx; loadSuccess = true; } break;
+                        case DatFileIds.ClothingTableId:
+                            if (portalDbForRangeLoad.TryReadFile<Clothing>(fileIdToLoad, out var clothing)) { loadedDbObj = clothing; loadSuccess = true; } break;
                         case DatFileIds.PaletteId:
                             if (portalDbForRangeLoad.TryReadFile<Palette>(fileIdToLoad, out var pal)) { loadedDbObj = pal; loadSuccess = true; } break;
                         case DatFileIds.SurfaceId:
@@ -226,6 +258,12 @@ namespace ACME.Managers
                             if (portalDbForRangeLoad.TryReadFile<RenderSurface>(fileIdToLoad, out var rs)) { loadedDbObj = rs; loadSuccess = true; } break;
                         case DatFileIds.SoundTableId:
                             if (portalDbForRangeLoad.TryReadFile<Wave>(fileIdToLoad, out var wave)) { loadedDbObj = wave; loadSuccess = true; } break;
+                        case DatFileIds.MaterialId:
+                            if (portalDbForRangeLoad.TryReadFile<MaterialInstance>(fileIdToLoad, out var mat)) { loadedDbObj = mat; loadSuccess = true; } break;
+                        case DatFileIds.ParticleEmitterTableId:
+                            if (portalDbForRangeLoad.TryReadFile<ParticleEmitter>(fileIdToLoad, out var emitter)) { loadedDbObj = emitter; loadSuccess = true; } break;
+                        case DatFileIds.EnvironmentId:
+                            if (portalDbForRangeLoad.TryReadFile<DatReaderWriter.DBObjs.Environment>(fileIdToLoad, out var env)) { loadedDbObj = env; loadSuccess = true; } break;
                         default:
                             Debug.WriteLine($"ListViewSelectionHandler: No specific loader implemented for range ID 0x{originalRangeId:X8}. Cannot load concrete object.");
                             break;

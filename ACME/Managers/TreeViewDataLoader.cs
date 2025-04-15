@@ -430,26 +430,94 @@ namespace ACME.Managers
                      catch (Exception psEx)
                      { Debug.WriteLine($"Error getting Palette Sets: {psEx.Message}"); _detailRenderer.ClearAndSetMessage("Error listing Palette Sets.", isError: true); itemsSource = null; }
                  }
-                 // --- Generic File Range Tables (Catch-all for other ranges) ---
-                 else if (DatParsingHelpers.IsRangeTableId(fileId))
-                 {
-                     displayDirectly = false; // Ensure range tables are listed first
-                     try
-                     {
-                         var items = targetDb.Tree.GetFilesInRange(fileId, fileId | 0x00FFFFFF);
-                         itemsSource = items?.Select(f => new { 
-                             Id = f.Id, 
-                             DisplayText = $"File 0x{f.Id:X8}", // Display text for the list view
-                             Value = f // Keep the original object for the detail view 
-                         }).ToList();
-                         _detailRenderer.ClearAndAddDefaultTitle();
-                         // Cast to IList to safely get the Count for any list type
-                         int count = (itemsSource as System.Collections.IList)?.Count ?? 0;
-                         _detailRenderer.AddInfoMessage($"Found {count} files. Select one from the list.");
-                     }
-                     catch (Exception rangeEx)
-                     { Debug.WriteLine($"Error getting files in range for {displayName}: {rangeEx.Message}"); _detailRenderer.ClearAndSetMessage($"Error listing files for {displayName}.", isError: true); }
-                 }
+                // --- Special Range: Palettes --- (Using GetFilesInRange for lazy loading)
+                else if (fileId == DatFileIds.PaletteId)
+                {
+                    displayDirectly = false;
+                    try
+                    {
+                        _detailRenderer.ClearAndAddDefaultTitle();
+                        Debug.WriteLine($"--- Loading Palette Range (0x{fileId:X8}) using GetFilesInRange ---");
+                        
+                        // Use GetFilesInRange to get only file info initially
+                        var paletteFiles = targetDb.Tree?.GetFilesInRange(fileId, fileId | 0x00FFFFFF);
+                        
+                        if (paletteFiles != null)
+                        {
+                            var paletteList = paletteFiles
+                                .Select(f => new { 
+                                    Id = f.Id, 
+                                    DisplayText = $"Palette 0x{f.Id:X8}", 
+                                    Value = (Palette?)null // Explicitly null Value for lazy loading
+                                })
+                                .OrderBy(p => p.Id)
+                                .ToList<object>(); // Ensure it's List<object> for ItemsSource
+
+                            itemsSource = paletteList;
+                            int count = paletteList.Count;
+                            Debug.WriteLine($"Found {count} Palette file entries.");
+                            _detailRenderer.AddInfoMessage($"Found {count} Palettes. Select one from the list.");
+                        }
+                        else
+                        {
+                            Debug.WriteLine("Tree.GetFilesInRange returned null for Palettes.");
+                            _detailRenderer.AddInfoMessage("No Palettes found (query returned null).");
+                            itemsSource = null;
+                        }
+                    }
+                    catch (Exception pEx)
+                    { 
+                        Debug.WriteLine($"Error getting Palette file entries: {pEx.Message}"); 
+                        _detailRenderer.ClearAndSetMessage("Error listing Palettes.", isError: true); 
+                        itemsSource = null; 
+                    }
+                }
+                // --- Generic File Range Tables (Catch-all for other ranges) ---
+                else if (DatParsingHelpers.IsRangeTableId(fileId))
+                {
+                    displayDirectly = false; // Ensure range tables are listed first
+                    try
+                    {
+                        // Handle Environment range specifically here to use its properties if needed for DisplayText
+                        if (fileId == DatFileIds.EnvironmentId) 
+                        {
+                            Debug.WriteLine($"--- Loading Environment Range (0x{fileId:X8}) ---");
+                            var envItems = targetDb.Tree.GetFilesInRange(fileId, fileId | 0x00FFFFFF);
+                            if (envItems == null)
+                            {
+                                Debug.WriteLine("!!! GetFilesInRange returned null for Environments!");
+                            }
+                            else
+                            {
+                                Debug.WriteLine($"GetFilesInRange returned {envItems.Count()} items for Environments.");
+                                itemsSource = envItems.Select(f => new { 
+                                    Id = f.Id, 
+                                    DisplayText = $"Environment 0x{f.Id:X8}", // Reverted to using ID
+                                    Value = f 
+                                }).ToList();
+                                Debug.WriteLine($"Created itemsSource list for Environments with {(itemsSource as System.Collections.IList)?.Count ?? -1} items.");
+                            }
+                            _detailRenderer.ClearAndAddDefaultTitle();
+                            int envCount = (itemsSource as System.Collections.IList)?.Count ?? 0;
+                            _detailRenderer.AddInfoMessage($"Found {envCount} environments. Select one from the list.");
+                        }
+                        else // Fallback for other range tables
+                        {
+                             var items = targetDb.Tree.GetFilesInRange(fileId, fileId | 0x00FFFFFF);
+                             itemsSource = items?.Select(f => new { 
+                                 Id = f.Id, 
+                                 DisplayText = $"File 0x{f.Id:X8}", // Display text for the list view
+                                 Value = f // Keep the original object for the detail view 
+                             }).ToList();
+                             _detailRenderer.ClearAndAddDefaultTitle();
+                             // Cast to IList to safely get the Count for any list type
+                             int count = (itemsSource as System.Collections.IList)?.Count ?? 0;
+                             _detailRenderer.AddInfoMessage($"Found {count} files. Select one from the list.");
+                        }
+                    }
+                    catch (Exception rangeEx)
+                    { Debug.WriteLine($"Error getting files in range for {displayName}: {rangeEx.Message}"); _detailRenderer.ClearAndSetMessage($"Error listing files for {displayName}.", isError: true); }
+                }
                 else { _detailRenderer.ClearAndSetMessage($"Loading not implemented for '{displayName}' (0x{fileId:X8}).", isError: true); }
 
                  // Add error messages if TryReadFile failed for single objects

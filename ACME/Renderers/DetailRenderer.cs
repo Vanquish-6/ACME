@@ -70,6 +70,12 @@ namespace ACME.Renderers
             _renderers.Add(typeof(Palette), new PaletteRenderer());
             _renderers.Add(typeof(PaletteSet), new PaletteSetRenderer());
             _renderers.Add(typeof(DatReaderWriter.DBObjs.Wave), new SoundRenderer());
+            _renderers.Add(typeof(DatReaderWriter.DBObjs.GfxObj), new GfxObjRenderer());
+            _renderers.Add(typeof(DatReaderWriter.DBObjs.Clothing), new ClothingRenderer());
+            _renderers.Add(typeof(DatReaderWriter.DBObjs.MaterialInstance), new MaterialInstanceRenderer());
+            _renderers.Add(typeof(DatReaderWriter.DBObjs.MaterialModifier), new MaterialModifierRenderer());
+            _renderers.Add(typeof(DatReaderWriter.DBObjs.ParticleEmitter), new ParticleEmitterRenderer());
+            _renderers.Add(typeof(DatReaderWriter.DBObjs.Environment), new EnvironmentRenderer());
             
             // Add other context-specific renderers here
         }

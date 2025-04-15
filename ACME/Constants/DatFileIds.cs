@@ -32,6 +32,7 @@ namespace ACME.Constants
         public const uint MotionTableId = 0x09000000; // MotionTable range start
         public const uint SoundTableId = 0x20000000; // SoundTable range start
         public const uint SoundResourceId = 0x0D000000; // SoundResource range start (Added)
+        public const uint EnvironmentId = 0x0D000000; // Environment range start (Added) <-- NOTE: Same ID as SoundResource?
         public const uint PaletteId = 0x04000000; // Palette range start (Corrected ID, was 0x0F000000)
         public const uint PaletteSetId = 0x0F000000; // PaletteSet range start (Added)
         public const uint ClothingTableId = 0x10000000; // ClothingTable range start

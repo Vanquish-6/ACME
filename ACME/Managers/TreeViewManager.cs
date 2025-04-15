@@ -177,6 +177,7 @@ namespace ACME.Managers
             TryAddNode(portalRoot, "Particle Emitters", DatFileIds.ParticleEmitterTableId, dbId);
             TryAddNode(portalRoot, "Generator Profiles", DatFileIds.GeneratorProfileId, dbId);
             TryAddNode(portalRoot, "Language Strings", DatFileIds.LanguageStringDataId, dbId);
+            TryAddNode(portalRoot, "Environments", DatFileIds.EnvironmentId, dbId);
 
             // Note: Local Dat types (UILayout, StringTable, FontLocal, StringState) are not added here
             // as this function populates for PortalDatabase.
@@ -346,7 +347,8 @@ namespace ACME.Managers
                 "Setups",
                 "Surfaces",
                 "SurfaceTextures",
-                // Property names NOT listed here (e.g., Waves, Environments, MaterialModifiers, etc.) 
+                "Environments",
+                // Property names NOT listed here (e.g., Waves, MaterialModifiers, etc.) 
                 // will be added dynamically by the loop, which is intended.
             };
             
