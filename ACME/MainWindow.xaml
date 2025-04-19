@@ -135,17 +135,20 @@
                                   ResizeBehavior="BasedOnAlignment"
                                   ResizeDirection="Columns"/>
 
-            <!-- Detail Pane (Temporarily remove ScrollViewer) -->
-            <!-- <ScrollViewer Grid.Column="4"
+            <!-- Detail Pane (Re-enable ScrollViewer) -->
+            <ScrollViewer Grid.Column="4"
                           x:Name="DetailScrollViewer"
-                          Padding="12"> -->
-                <StackPanel Grid.Column="4" Padding="12" x:Name="DetailStackPanel">
+                          Padding="12"
+                          VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="DetailStackPanel">
+                    <!-- Content is added dynamically by DetailRenderer -->
+                    <!-- Initial placeholder content can be removed or kept -->
+                    <!-- 
                     <TextBlock Text="Item Details" Style="{ThemeResource TitleTextBlockStyle}"/>
-                    <!-- Placeholder for dynamic details -->
                     <TextBlock Text="Select an item from the list view." Margin="0,12,0,0"/>
-                    <!-- Nested elements will go here later -->
+                    -->
                 </StackPanel>
-            <!-- </ScrollViewer> -->
+            </ScrollViewer>
         </Grid>
     </Grid>
 </Window>

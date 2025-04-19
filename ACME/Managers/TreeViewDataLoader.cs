@@ -351,22 +351,33 @@ namespace ACME.Managers
                         _detailRenderer.ClearAndSetMessage("Failed to load ChatPoseTable data.", isError: true);
                     }
                 }
-                // --- Single Object Tables ---
-                 else if (fileId == DatFileIds.ExperienceTableId && portalDb.TryReadFile<ExperienceTable>(fileId, out var expTable))
+                // --- Single Object Tables (Check PortalDatabase.generated.cs for properties) ---
+                 else if (fileId == DatFileIds.ExperienceTableId) // Access property directly
                  {
-                     displayDirectly = false;
-                     itemsSource = new List<object>
+                     var expTable = portalDb.ExperienceTable; // Use property
+                     if (expTable != null)
                      {
-                         new { DisplayText = "Attribute XP",      Data = expTable.Attributes },
-                         new { DisplayText = "Vital XP",          Data = expTable.Vitals },
-                         new { DisplayText = "Trained Skill XP",  Data = expTable.TrainedSkills },
-                         new { DisplayText = "Specialized Skill XP",Data = expTable.SpecializedSkills },
-                         new { DisplayText = "Character Level XP",Data = expTable.Levels },
-                         new { DisplayText = "Skill Credits",     Data = expTable.SkillCredits }
-                     };
-                     _detailRenderer.ClearAndAddDefaultTitle();
-                     _detailRenderer.AddInfoMessage("Select an XP category from the list.");
+                         displayDirectly = false; // This specific table needs listing, not direct display
+                         itemsSource = new List<object>
+                         {
+                             new { DisplayText = "Attribute XP",      Data = expTable.Attributes },
+                             new { DisplayText = "Vital XP",          Data = expTable.Vitals },
+                             new { DisplayText = "Trained Skill XP",  Data = expTable.TrainedSkills },
+                             new { DisplayText = "Specialized Skill XP",Data = expTable.SpecializedSkills },
+                             new { DisplayText = "Character Level XP",Data = expTable.Levels },
+                             new { DisplayText = "Skill Credits",     Data = expTable.SkillCredits }
+                         };
+                         _detailRenderer.ClearAndAddDefaultTitle();
+                         _detailRenderer.AddInfoMessage("Select an XP category from the list.");
+                     }
+                     else { _detailRenderer.ClearAndSetMessage("Failed to load ExperienceTable data.", isError: true); itemsSource = null; }
                  }
+                else if (fileId == DatFileIds.TabooTableId) // Access property directly
+                {
+                    itemsSource = portalDb.TabooTable; // Use property
+                    displayDirectly = true;
+                    if (itemsSource == null) { _detailRenderer.ClearAndSetMessage($"Failed to load TabooTable data (ID: 0x{fileId:X8}).", isError: true); }
+                }
                 // --- CharGen with Subtypes ---
                  else if (fileId == DatFileIds.CharGenId)
                  {
@@ -520,9 +531,10 @@ namespace ACME.Managers
                 }
                 else { _detailRenderer.ClearAndSetMessage($"Loading not implemented for '{displayName}' (0x{fileId:X8}).", isError: true); }
 
-                 // Add error messages if TryReadFile failed for single objects
-                 if (displayDirectly && itemsSource == null)
-                 { _detailRenderer.ClearAndSetMessage($"Failed to load data for {displayName}.", isError: true); }
+                 // Add error messages if TryReadFile failed for single objects that were attempted
+                 if (displayDirectly && itemsSource == null && 
+                     (fileId == DatFileIds.TabooTableId /* Add other checked IDs that use displayDirectly=true */ ))
+                 { /* Message already set above if null */ }
             }
             else { _detailRenderer.ClearAndSetMessage($"Loading not implemented for '{displayName}' in non-Portal DB.", isError: true); }
             return itemsSource;
@@ -628,26 +640,39 @@ namespace ACME.Managers
             else if (targetDb is PortalDatabase portalDbForProps)
             {
                 itemsSource = GetPropertyDynamically(portalDbForProps, baseTag);
+            
+                // --- BEGIN ADDITION: Handle CombatTables specifically ---
+                // Ensure this specific handling for the dynamically loaded property is present
+                if (baseTag.Equals("CombatTables", StringComparison.OrdinalIgnoreCase) && itemsSource is DBObjCollection<CombatTable> combatTables)
+                {
+                    itemsSource = combatTables.Select(ct => new {
+                        Id = ct.Id,
+                        DisplayText = $"CombatTable 0x{ct.Id:X8}",
+                        Value = ct
+                    }).OrderBy(ct => ct.Id).ToList();
+                    displayDirectly = false; // Ensure it's treated as a list
+                }
+                // --- END ADDITION ---
 
-                 // --- BEGIN ADDITION: Handle Waves specifically ---
-                 if (baseTag.Equals("Waves", StringComparison.OrdinalIgnoreCase) && itemsSource is DBObjCollection<Wave> waves)
-                 {
-                     itemsSource = waves.Select(w => new {
-                         Id = w.Id,
-                         DisplayText = $"Wave 0x{w.Id:X8}",
-                         Value = w
-                     }).OrderBy(w => w.Id).ToList();
-                     displayDirectly = false; // Ensure it's treated as a list
-                 }
-                 // --- END ADDITION ---
+                // --- BEGIN ADDITION: Handle Waves specifically ---
+                if (baseTag.Equals("Waves", StringComparison.OrdinalIgnoreCase) && itemsSource is DBObjCollection<Wave> waves)
+                {
+                    itemsSource = waves.Select(w => new {
+                        Id = w.Id,
+                        DisplayText = $"Wave 0x{w.Id:X8}",
+                        Value = w
+                    }).OrderBy(w => w.Id).ToList();
+                    displayDirectly = false; // Ensure it's treated as a list
+                }
+                // --- END ADDITION ---
 
-                 if (itemsSource != null)
-                 {
-                      _detailRenderer.ClearAndAddDefaultTitle();
-                       int count = (itemsSource as ICollection)?.Count ?? -1;
-                      _detailRenderer.AddInfoMessage($"Data loaded for {displayName}. {(count>=0 ? count.ToString() + " items." : "")} Select item from list if applicable.");
-                 }
-                 else { _detailRenderer.ClearAndSetMessage($"Could not load data for '{baseTag}' from Portal DB.", isError: true); }
+                if (itemsSource != null)
+                {
+                     _detailRenderer.ClearAndAddDefaultTitle();
+                      int count = (itemsSource as ICollection)?.Count ?? -1;
+                     _detailRenderer.AddInfoMessage($"Data loaded for {displayName}. {(count>=0 ? count.ToString() + " items." : "")}. Select item from list if applicable.");
+                }
+                else { _detailRenderer.ClearAndSetMessage($"Could not load data for '{baseTag}' from Portal DB.", isError: true); }
             }
             else { _detailRenderer.ClearAndSetMessage($"Loading not implemented for '{baseTag}' in DB type {targetDb.GetType().Name}.", isError: true); }
 

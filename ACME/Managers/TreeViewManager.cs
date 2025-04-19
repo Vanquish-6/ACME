@@ -146,7 +146,6 @@ namespace ACME.Managers
             
             // Add nodes based on corrected DatFileIds constants
             TryAddNode(portalRoot, "Weenie Defaults", DatFileIds.WeenieDefaultsId, dbId);
-            TryAddNode(portalRoot, "Combat Table", DatFileIds.CombatTableId, dbId);
             TryAddNode(portalRoot, "Skill Table", DatFileIds.SkillTableId, dbId);
             TryAddNode(portalRoot, "Spell Components", DatFileIds.SpellComponentsTableId, dbId);
             TryAddNode(portalRoot, "Experience Table", DatFileIds.ExperienceTableId, dbId);
@@ -322,7 +321,6 @@ namespace ACME.Managers
                 // Single-file object properties (won't be picked up by IEnumerable loop, but kept for clarity)
                 "CharGen", 
                 "ChatPoseTable", 
-                "CombatTable", 
                 "ExperienceTable", 
                 "GameEventTable", 
                 "SkillTable", 

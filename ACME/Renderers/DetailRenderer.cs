@@ -77,6 +77,9 @@ namespace ACME.Renderers
             _renderers.Add(typeof(DatReaderWriter.DBObjs.ParticleEmitter), new ParticleEmitterRenderer());
             _renderers.Add(typeof(DatReaderWriter.DBObjs.Environment), new EnvironmentRenderer());
             
+            // Add CombatTable renderer (Keep this one as it wasn't duplicated)
+            _renderers.Add(typeof(DatReaderWriter.DBObjs.CombatTable), new CombatTableRenderer()); 
+            
             // Add other context-specific renderers here
         }
 
