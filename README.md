@@ -10,6 +10,9 @@ ACME Editor is a Windows WinUI 3 application for viewing and editing Asheron's C
 - **Modern UI**: Built with WinUI 3 for a modern Windows look and feel
 - **Split-View Interface**: Three-panel layout with navigation tree, item list, and detail view
 - **Spell Editing**: View and modify spell properties with changes saved back to .dat files
+- **Combat Table Viewing**: 
+  - Dynamically lists `CombatTable` objects (range 0x30xxxx).
+  - Renders `CombatTable` details, including a nested/collapsible view of `CombatManeuver`s.
 
 ## Technical Overview
 
@@ -38,9 +41,18 @@ ACME Editor is a Windows WinUI 3 application for viewing and editing Asheron's C
 ### Implemented
 - File opening functionality
 - Database structure navigation
-- Basic viewing of database contents
+- Basic viewing of database contents for many types
 - Three-panel UI with resizable panels
-- Spell editing and saving back to .dat files
+- Detail rendering for numerous types (Spells, Textures, Palettes, Animations, etc.)
+- Specific viewers/editors:
+  - Spell editing and saving back to .dat files
+  - Combat Table viewing with nested maneuver details
+- UI fixes (Scrollbars, node handling)
+
+### Known Issues / Limitations
+- **Unimplemented Nodes**: Loading logic is missing for certain specific File IDs.
+- **Performance**: Loading very large collections (like EnvCells) directly into the list view can be slow.
+- **Editing**: Currently, only Spells are editable.
 
 ### Planned Features
 - Editing capabilities for other data types:
