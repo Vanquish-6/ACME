@@ -192,7 +192,16 @@ namespace ACME.Managers
             
             if (db != null)
             {
-                db.Database.Dispose();
+                try
+                {
+                    db.Database.Dispose();
+                }
+                catch (ObjectDisposedException ode) // Revert to specific exception type
+                {
+                    // Log the exception that occurs when the underlying stream in StreamBlockAllocator is already closed before Flush is called.
+                    // This is a workaround for an issue likely within DatReaderWriter disposal logic.
+                    Debug.WriteLine($"Caught ObjectDisposedException during {db.FileName} closure (likely during StreamBlockAllocator.Flush): {ode.Message}");
+                }
                 _loadedDatabases.Remove(db);
                 
                 // If we removed the current database, update current
@@ -218,7 +227,16 @@ namespace ACME.Managers
         {
             foreach (var db in _loadedDatabases)
             {
-                db.Database?.Dispose();
+                try
+                {
+                    db.Database?.Dispose();
+                }
+                catch (ObjectDisposedException ode) // Revert to specific exception type
+                {
+                    // Log the exception that occurs when the underlying stream in StreamBlockAllocator is already closed before Flush is called.
+                    // This is a workaround for an issue likely within DatReaderWriter disposal logic.
+                    Debug.WriteLine($"Caught ObjectDisposedException during {db.FileName} closure (likely during StreamBlockAllocator.Flush): {ode.Message}");
+                }
             }
             
             _loadedDatabases.Clear();
