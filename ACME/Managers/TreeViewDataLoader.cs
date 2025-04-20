@@ -108,6 +108,9 @@ namespace ACME.Managers
         /// <returns>Task representing the async operation</returns>
         public async Task ProcessTreeViewSelectionAsync(TreeViewNode? selectedNode)
         {
+            // --- DEBUG ADDED ---
+            Debug.WriteLine($"ProcessTreeViewSelectionAsync START (Refresh Trigger: {selectedNode?.Content == _lastSuccessfulNodeData})");
+            // --- END DEBUG ---
             DataLoadingStarted?.Invoke(this, EventArgs.Empty);
             _detailRenderer.ClearAndSetMessage("Processing selection...", isError: false);
 
@@ -189,6 +192,9 @@ namespace ACME.Managers
             }
             finally
             {
+                // --- DEBUG ADDED ---
+                Debug.WriteLine($"ProcessTreeViewSelectionAsync END (Refresh Trigger: {selectedNode?.Content == _lastSuccessfulNodeData})");
+                // --- END DEBUG ---
                 GoToCompletionState();
             }
         }
@@ -833,6 +839,10 @@ namespace ACME.Managers
         /// </summary>
         public void RefreshCurrentView()
         {
+            // --- DEBUG ADDED ---
+            Debug.WriteLine($"TreeViewDataLoader.RefreshCurrentView called. Last Node: {(_lastSuccessfulNodeData != null ? $"{_lastSuccessfulNodeData.DisplayName} ({_lastSuccessfulNodeData.Identifier})" : "null")}");
+            // --- END DEBUG ---
+            
             Debug.WriteLine("TreeViewDataLoader.RefreshCurrentView called");
             
             // Reprocess the last successful node to refresh the whole view

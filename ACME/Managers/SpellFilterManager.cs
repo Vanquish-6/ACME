@@ -61,30 +61,27 @@ namespace ACME.Managers
 
             if (_currentSpellTable.Spells != null && _currentSpellTable.Spells.Count > 0)
             {
-                var filteredSpells = _currentSpellTable.Spells.Values.AsEnumerable();
+                // --- Filtering Logic - Filter the Dictionary directly ---
+                var filteredEntries = _currentSpellTable.Spells.AsEnumerable(); // Start with all KeyValuePairs
 
-                // --- Filtering Logic ---
                 if (!string.IsNullOrWhiteSpace(nameFilter))
                 {
-                    filteredSpells = filteredSpells.Where(s => s.Name != null && s.Name.Contains(nameFilter, StringComparison.OrdinalIgnoreCase));
+                    filteredEntries = filteredEntries.Where(kvp => kvp.Value.Name != null && kvp.Value.Name.Contains(nameFilter, StringComparison.OrdinalIgnoreCase));
                 }
                 if (schoolFilter.HasValue)
                 {
-                    filteredSpells = filteredSpells.Where(s => s.School == schoolFilter.Value);
+                    filteredEntries = filteredEntries.Where(kvp => kvp.Value.School == schoolFilter.Value);
                 }
                 if (componentFilter.HasValue)
                 {
-                    filteredSpells = filteredSpells.Where(s => s.Components != null && s.Components.Contains(componentFilter.Value));
+                    filteredEntries = filteredEntries.Where(kvp => kvp.Value.Components != null && kvp.Value.Components.Contains(componentFilter.Value));
                 }
                 // --- End Filtering Logic ---
 
-                // Convert filtered results to list for the UI
-                var filteredList = filteredSpells
-                    .Select(s =>
-                    {
-                        var kvp = _currentSpellTable.Spells.FirstOrDefault(entry => entry.Value == s);
-                        return new { Id = kvp.Key, Name = s.Name ?? "?", DisplayText = $"{kvp.Key}: {s.Name ?? "?"}", Value = s };
-                    })
+                // Convert filtered KeyValuePairs to list for the UI
+                // No need for the costly FirstOrDefault lookup here anymore
+                var filteredList = filteredEntries
+                    .Select(kvp => new { Id = kvp.Key, Name = kvp.Value.Name ?? "?", DisplayText = $"{kvp.Key}: {kvp.Value.Name ?? "?"}", Value = kvp.Value })
                     .OrderBy(s => s.Id)
                     .ToList();
 

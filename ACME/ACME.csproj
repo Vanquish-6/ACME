@@ -11,6 +11,7 @@
     <UseWinUI>true</UseWinUI>
     <!-- <EnableMsixTooling>true</EnableMsixTooling> --> <!-- Removed MSIX Tooling -->
     <Nullable>enable</Nullable>
+    <ApplicationIcon>Assets\ACMELogo.ico</ApplicationIcon>
 
     <!-- Unpackaged App Settings -->
     <WindowsPackageType>None</WindowsPackageType>

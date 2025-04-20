@@ -1057,9 +1057,10 @@ namespace ACME.Renderers
                                                 refresh(spell);
                                             }
                                             // If the main window has a refresh method, call it
-                                            else if (context.TryGetValue("RefreshView", out var refreshViewAction) && 
+                                            if (context.TryGetValue("RefreshView", out var refreshViewAction) && 
                                                      refreshViewAction is Action refreshView)
                                             {
+                                                Debug.WriteLine($"SpellBaseRenderer: Calling RefreshView action for Spell ID: {originalSpellId}");
                                                 refreshView();
                                             }
                                         }
